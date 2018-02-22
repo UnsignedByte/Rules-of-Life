@@ -3,32 +3,33 @@
  * @Date:   16:41:55, 13-Feb-2018
  * @Filename: life.css
  * @Last modified by:   edl
- * @Last modified time: 16:43:57, 13-Feb-2018
+ * @Last modified time: 18:38:01, 14-Feb-2018
  */
- @charset "utf-8";
- /* CSS Document */
 
- html {
- 	height: 100%;
-   background-color: #8E8E8D;
- }
- body {
- 	height: 100%;
- 	margin: 0;
- }
+@charset "utf-8";
+/* CSS Document */
 
- input {
-   color: #F6F5F2;
-   text-align: center;
-   border-width: 3px;
-   border-style: solid;
-   border-color: #302F2E;
-   border-radius: 5px;
-   background-color: #5D5D5B;
-   font-family: "Courier New", Courier, monospace;
-   font-size:14px;
-   color: #F6F5F2;
-   padding-top: 5px;
-   padding-bottom: 5px;
-   width: 100px;
- }
+html {
+	height: 100%;
+ background-color: #8E8E8D;
+}
+body {
+	height: 100%;
+	margin: 0;
+}
+
+input {
+ color: #F6F5F2;
+ text-align: center;
+ border-width: 3px;
+ border-style: solid;
+ border-color: #302F2E;
+ border-radius: 5px;
+ background-color: #5D5D5B;
+ font-family: "Courier New", Courier, monospace;
+ font-size:14px;
+ color: #F6F5F2;
+ padding-top: 5px;
+ padding-bottom: 5px;
+ width: 100px;
+}
