@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 16:56:07, 21-Feb-2018
+ * @Last modified time: 17:19:47, 21-Feb-2018
  */
 
 //the canvas
@@ -179,7 +179,36 @@ function randomCell(){
   );
 }
 
+//Creates an array of num random commands
+function randCommands(num){
+  comms = new Array();
+  for ( int i = 0; i < num; i++){
+    comms.push(randCommand());
+  }
+  return comms;
+}
+
+//Creates a random command
+function randCommand(){
+  var actions = ["avoid", "goto"];
+  var subjects = ["sBig", "sSmall", "cFood"];
+  var comparisons = ["<", "<=", ">=", ">"];
+
+  var condition = "dist("+randVal(subjects)+")"+randVal(comparisons)+randInt(0, 100);
+  var action = new Array(randInt(1,5));
+  for( var i = 0; i < action.length; i++){
+    action[i] = randVal(actions)+" "+randVal(subjects);
+  }
+
+  return new Command(condition, action);
+}
+
 //Returns a random int between min and max, inclusive.
 function randInt(min, max) {
   return Math.floor(Math.random() * (max-min)+1)+min;
+}
+
+//Returns a random value in an array
+function randVal(a){
+  return a[randInt(0, a.length-1)];
 }
