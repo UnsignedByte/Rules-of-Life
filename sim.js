@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 16:06:53, 21-Feb-2018
+ * @Last modified time: 16:56:07, 21-Feb-2018
  */
 
 //the canvas
@@ -33,6 +33,7 @@ class Food extends Element {
 class Cell extends Element {
   /**
    * Variable Descriptions
+   * id is the id of the cell in cells
    * health is how healthy this cell is.
    * metabolism is how fast the cell loses health;
    * lifespan is the length of this cell's life.
@@ -40,24 +41,23 @@ class Cell extends Element {
    * speed is multiplier for the speed of the cell; Real speed determined by size
    * size is the size of the Cell
    */
-  constructor(metabolism, lifespan, reproSize, speed, size, sight, x, y){
+  constructor(metabolism, reproSize, speed, size, sight, x, y, args){
     super(x, y);
+    this.id = cells.length;
     this.health = 1000;
     this.metabolism = metabolism;
-    this.lifespan = lifespan;
     this.reproSize = reproSize;
     this.speed = speed;
     this.size = 10;
+    this.args = args;
   }
 
   //Cell moves according to its given rules.
   move(){
-    var closest = closestCells();
+    var closest = this.closestCells();
     var sSmall = closest[0];
     var sBig = closest[1];
-    if(this.dist(cells[0])<this.sight){
-
-    }
+    var cFood = this.closestFood();
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -65,19 +65,31 @@ class Cell extends Element {
     var eatable = new Array();
     var cFood;
     for ( var i = 0; i < feed.length; i++ ){
-      if ( dist(feed[i])<=size ){
-
+      //Eats food that can be eaten and finds closest non-eatable food.
+      if ( dist(feed[i])<=this.size ){
+        this.health+=feed[i].size;
+        eatable.push(i);
       }else if ( dist( feed[i] < dist( cFood ))) {
-
+        cFood = i;
       }
     }
+
+    //Removes eaten food
+    for ( var i = 0; i < eatable.length; i++ ){
+      if ( eatable[i]>-1 ){
+        feed.splice(eatable[i], 1);
+      }
+    }
+    return cFood;
   }
 
   //gets the closest bigger cell and smaller cell
   closestCells(){
     var sBig, sSmall;
     for ( var i = 0; i < cells.length; i++ ){
-      if ( cells[i].size < this.size && dist(cells[i])<dist(cells[sSmall]) ) {
+      if ( this.id = cells[i].id ){
+        continue;
+      }else if ( cells[i].size < this.size && dist(cells[i])<dist(cells[sSmall]) ) {
         sSmall = i;
       }else if ( cells[i].size > this.size && dist(cells[i])<dist(cells[sBig]) ) {
         sBig = i;
@@ -101,6 +113,15 @@ class Cell extends Element {
   }
 }
 
+//Class containing a rule the cell must follow
+class Command {
+  constructor ( condition, actions ){
+    this.condition = condition;
+    this.actions = actions;
+  }
+}
+
+
 
 
 
@@ -114,37 +135,47 @@ init();
 function init() {
   canv.width  = window.innerWidth;
   canv.height = window.innerHeight;
-  for (var i = 0; i < 10; i++){
+  for (var i = 0; i < 100; i++){
     cells.push(randomCell());
   }
-  frame();
+  window.requestAnimationFrame(frame);
 }
 
 //Updates each frame
 function frame() {
   for (var i = 0; i<cells.length; i++){
     context.beginPath();
-    context.arc(cells[i].x, cells[i].y, cells[i].size/10, 0, 2 * Math.PI, false);
+    context.arc(cells[i].x, cells[i].y, cells[i].size/2, 0, 2 * Math.PI, false);
     context.fillStyle = '#003300';
-    context.fill();
-    context.lineWidth = 5;
     context.strokeStyle = '#003300';
     context.stroke();
-    cells[i].update();
+    context.fill();
+    cells[i].id = i;
+    cells[i].move();
   }
-  frame();
+  for (var i = 0; i<feed.length; i++){
+    context.beginPath();
+    context.arc(cells[i].x, cells[i].y, cells[i].size/2, 0, 2 * Math.PI, false);
+    context.fillStyle = '#003300';
+    context.strokeStyle = '#003300';
+    context.stroke();
+    context.fill();
+    cells[i].move();
+  }
+  window.requestAnimationFrame(frame);
 }
 
 //Creates a random cell with random attributes
 function randomCell(){
   return new Cell(
-    randInt(100,1000),    //lifespan
-    randInt(50,500),      //reproSize
-    randInt(1,10),        //speed
-    randInt(10,15),       //size
-    randInt(0,25),        //sight
-    randInt(0,canv.width),//x
-    randInt(0,canv.height)//y
+    randInt(1,10)/10,       //metabolism
+    randInt(50,500),        //reproSize
+    randInt(1,10),          //speed
+    randInt(10,15),         //size
+    randInt(0,25),          //sight
+    randInt(0,canv.width),  //x
+    randInt(0,canv.height), //y
+    randCommands(10)        //args
   );
 }
 
