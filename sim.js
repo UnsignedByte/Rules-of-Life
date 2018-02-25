@@ -3,13 +3,12 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 19:44:55, 24-Feb-2018
+ * @Last modified time: 07:57:13, 25-Feb-2018
  */
 
 //the canvas
 var canv = document.getElementById('world');
 var context = canv.getContext("2d");
-console.log("mrnabas");
 //Array of all existing cells
 var feed = new Array();
 var cells = new Array();
@@ -20,6 +19,7 @@ class Element {
   constructor(x, y, color){
     this.x=x;
     this.y=y;
+    this.age = 0;
     this.color = color;
   }
 }
@@ -28,7 +28,16 @@ class Element {
 class Food extends Element {
   constructor(x, y, color){
     super(x, y, color);
-    this.size = size;
+  }
+
+  ageInc(i){
+    this.age++;
+    if ( this.age>1000 ){
+      feed[i] = new Food(
+        randInt(0,canv.width),
+        randInt(0,canv.height),
+        randColor());
+    }
   }
 }
 
@@ -37,17 +46,12 @@ class Food extends Element {
 class Cell extends Element {
   /**
    * Variable Descriptions
-   * id is the id of the cell in cells
-   * health is how healthy this cell is.
-   * metabolism is how fast the cell loses health;
-   * lifespan is the length of this cell's life.
-   * reproSize is minimum size for mitosis
-   * speed is multiplier for the speed of the cell; Real speed determined by size
    * size is the size of the Cell
+   * (x,y) is the position of the Cell
+   * color is the cell trail color
    */
   constructor(size, x, y, color, args){
     super(x, y, color);
-    this.health = 1000;
     this.size = size;
     this.args = args;
   }
@@ -55,21 +59,20 @@ class Cell extends Element {
   //gets the closest food and eats food that is within it's grasp
   closestFood(){
     var eatable = new Array();
-    var cFood;
+    var cFood = 0;
     for ( var i = 0; i < feed.length; i++ ){
       //Eats food that can be eaten and finds closest non-eatable food.
       if ( this.dist(feed[i])<=this.size ){
-        this.health+=feed[i].size;
-        eatable.push(i);
+        this.size+=0.1;
+        feed.splice(i, 1);
+        i--;
+        feed.push(new Food(
+          randInt(0,canv.width),
+          randInt(0,canv.height),
+          randColor()
+        ));
       }else if ( this.dist( feed[i] < this.dist( cFood ))) {
         cFood = i;
-      }
-    }
-
-    //Removes eaten food
-    for ( var i = 0; i < eatable.length; i++ ){
-      if ( eatable[i]>-1 ){
-        feed.splice(eatable[i], 1);
       }
     }
     return feed[cFood];
@@ -84,7 +87,16 @@ class Cell extends Element {
         continue;
       }else if ( cells[i].size < this.size ) {
         if( typeof sSmall === 'undefined' || this.dist(cells[i])<this.dist(cells[sSmall])){
-          sSmall = i;
+          if ( this.dist(cells[i]) <= this.size/2 ) {
+            this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(cells[i].size/2, 2));
+            cells.splice(i, 1);
+            if ( i < currId ) {
+              currId--;
+            }
+            i--;
+          }else {
+            sSmall = i;
+          }
         }
       }else if ( cells[i].size > this.size ) {
         if( typeof sBig === 'undefined' || this.dist(cells[i])<this.dist(cells[sBig])){
@@ -138,31 +150,63 @@ class Cell extends Element {
     }
   }
 
+  //Creates a new cell with possibility of mutation
+  reproduce(){
+    cells.push(newCell(this.size, this.color, this.args));
+  }
+
   //Cell moves according to its given rules.
   move(){
+    if ( this.size > 20 ){
+      this.size = Math.sqrt(Math.pow(this.size, 2)/2);
+      this.reproduce();
+    }
     var closest = this.closestCells();
     var all = {};
     all["sSmall"] = closest[0];
     all["sBig"] = closest[1];
     all["cFood"] = this.closestFood();
+    var anyPos = true;
+    var changeX = this.x;
+    var changeY = this.y;
     for( var i = 0; i < this.args.length; i++ ) {
       var comm = this.args[i];
       if( this.isCond( comm, all ) ){
+        anyPos = false;
         var acts = comm.actions;
         for ( var j = 0; j < acts.length; j++ ){
           var targ = all[acts[j][1]];
           if ( typeof targ !== 'undefined' ){
             if ( acts[j][0] == "goto" ){
-              this.x-=(this.x-targ.x)/this.dist(targ);
-              this.y-=(this.y-targ.y)/this.dist(targ);
+              changeX-=(this.x-targ.x)/this.dist(targ);
+              changeY-=(this.y-targ.y)/this.dist(targ);
             }else if ( acts[j][0] == "avoid" ) {
-              this.x+=(this.x-targ.x)/this.dist(targ);
-              this.y+=(this.y-targ.y)/this.dist(targ);
+              changeX+=(this.x-targ.x)/this.dist(targ);
+              changeY+=(this.y-targ.y)/this.dist(targ);
             }
           }
         }
       }
     }
+    if ( anyPos ){
+      var deg = randInt(1,360);
+      this.x+=Math.sin(deg/180 * Math.PI);
+      this.y+=Math.cos(deg/180 * Math.PI);
+    }else{
+      this.x-=5*(this.x-changeX)/Math.sqrt(Math.pow(this.x-changeX, 2)+Math.pow(this.y-changeY, 2));
+      this.y-=5*(this.y-changeY)/Math.sqrt(Math.pow(this.x-changeX, 2)+Math.pow(this.y-changeY, 2));
+    }
+    this.size-=0.025;
+    if ( isNaN(this.x) || isNaN(this.y) ){
+      this.reproduce();
+      cells.splice(currId, 1);
+      currId--;
+    }
+    if ( this.size <= 0 || isNaN(this.x) || isNaN(this.y) ){
+      cells.splice(currId, 1);
+      currId--;
+    }
+    this.age++;
   }
 }
 
@@ -178,30 +222,47 @@ class Command {
 
 
 
+//END OF CLASS DEFENITIONS
 
+
+
+
+
+
+
+
+
+
+
+
+//START OF PROGRAM
+
+
+
+
+var currId = 0;
 
 init();
 
 function init() {
   canv.width  = window.innerWidth;
   canv.height = window.innerHeight;
-  for (var i = 0; i < 1000; i++){
+  for (var i = 0; i < 100; i++){
     cells.push(randomCell());
+  }
+  for (var i = 0; i < 2000; i++){
+    feed.push(new Food(
+      randInt(0,canv.width),
+      randInt(0,canv.height),
+      randColor()
+    ));
   }
   window.requestAnimationFrame(frame);
 }
 
 //Updates each frame
 function frame() {
-  for (var i = 0; i<cells.length; i++){
-    context.beginPath();
-    context.arc(cells[i].x, cells[i].y, cells[i].size/2, 0, 2 * Math.PI, false);
-    context.fillStyle = cells[i].color;
-    context.strokeStyle = cells[i].color;
-    context.stroke();
-    context.fill();
-    cells[i].move();
-  }
+  changeOldest = false;
   for (var i = 0; i<feed.length; i++){
     context.beginPath();
     context.arc(feed[i].x, feed[i].y, 0.5, 0, 2 * Math.PI, false);
@@ -209,7 +270,28 @@ function frame() {
     context.strokeStyle = '#003300';
     context.stroke();
     context.fill();
+    feed[i].ageInc(i);
   }
+  var oldest = cells[0];
+  for ( currId = 0; currId<cells.length; currId++ ){
+    if ( oldest.age+1 == cells[currId].age ){
+      oldest = cells[currId];
+    }else if ( oldest.age < cells[currId].age ){
+      oldest = cells[currId];
+      changeOldest = true;
+    }
+    cells[currId].move();
+    context.beginPath();
+    context.arc(cells[currId].x, cells[currId].y, cells[currId].size/2, 0, 2 * Math.PI, false);
+    context.fillStyle = cells[currId].color;
+    context.strokeStyle = cells[currId].color;
+    context.stroke();
+    context.fill();
+  }
+  if (true){
+    //console.log(oldest);
+  }
+  //context.clearRect(0, 0, canv.width, canv.height);
   context.fillStyle = '#8E8E8D';
   context.globalAlpha = 0.025;
   context.fillRect(0,0,canv.width,canv.height);
@@ -223,7 +305,7 @@ function randomCell(){
     randInt(1000,1500)/100, //size
     randInt(0,canv.width),  //x
     randInt(0,canv.height), //y
-    randColor(),            //color of trail
+    randColor(),            //color
     randCommands(10)        //args
   );
 }
@@ -237,13 +319,98 @@ function randCommands(num){
   return comms;
 }
 
+//Creates commands with chance of mutation
+function newCell(size, color, comms){
+  newComms = new Array();
+  for ( var i = 0; i < comms.length; i++ ){
+    newComms.push(newCommand(comms[i]));
+  }
+
+  var percentage = 10; //Chance of change in color
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    var col = '0x'+color.substr(1).toUpperCase();
+    color = '#'+(parseInt(col)+randInt(-4096,4096)).toString(16)
+  }
+
+
+  for ( i = 0; i < randInt(0,5); i++ ){
+    percentage = 0.5; //Chance of losing a command
+    if ( randInt( 1, 10000 ) <= percentage*100 ){
+      newComms.splice(-1,1);
+    }
+
+    var percentage = 0.5; //Chance of completely random command
+    if ( randInt( 1, 10000 ) <= percentage*100 ){
+      newComms.push(randCommand());
+    }
+  }
+
+  return new Cell (size, randInt(0, canv.width), randInt(0, canv.height), color, newComms);
+}
+
+//Creates possibly mutated command
+function newCommand(comm){
+  var action = ["avoid", "goto"];
+  var subjects = ["sBig", "sSmall", "cFood"];
+
+  var percentage = 1; //Chance of change in subject
+  var condition = comm.condition;
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    condition[0] = randVal(subjects);
+  }
+
+  percentage = 1; //Chance of change in comparison (<,<=,>=,>)
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    condition[1] = randInt(0,3);
+  }
+
+  percentage = 20; //Chance of slight change in distance
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    condition[2] += randInt(-15,15);
+    condition[2] = Math.min(canv.width, Math.max(0, condition[2]));
+  }
+
+  percentage = 1; //Chance of completely random distance
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    condition[2] += randInt(0, 200);
+  }
+
+  var actions = comm.actions;
+  for ( var i = 0; i < actions.length; i++ ){
+
+    percentage = 2; //Chance of change in action
+    if ( randInt( 1, 10000 ) <= percentage*100 ){
+      actions[i][0] = randVal(action);
+    }
+
+
+    percentage = 1; //Chance of change in target
+    if ( randInt( 1, 10000 ) <= percentage*100 ){
+      actions[i][1] = randVal(subjects);
+    }
+
+    percentage = 0.5; //Chance of change in target
+    for ( var j = 0; j < 5; j++ ){
+      if ( randInt( 1, 10000 ) <= percentage*100 ){
+        actions.splice(-1,1);
+      }
+        if ( randInt( 1, 10000 ) <= percentage*100 || actions.length == 0 ){
+          actions.push([randVal(action), randVal(subjects)]);
+        }
+    }
+
+  }
+
+  return new Command(condition, actions);
+}
+
 //Creates a random command
 function randCommand(){
   var actions = ["avoid", "goto"];
   var subjects = ["sBig", "sSmall", "cFood"];
 
   var condition = [randVal(subjects),randInt(0,3),randInt(0, 100)];
-  var action = new Array(randInt(1,5));
+  var action = new Array(randInt(1,3));
   for( var i = 0; i < action.length; i++){
     action[i] = [randVal(actions),randVal(subjects)];
   }
