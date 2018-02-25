@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 07:57:13, 25-Feb-2018
+ * @Last modified time: 13:44:06, 25-Feb-2018
  */
 
 //the canvas
@@ -12,7 +12,6 @@ var context = canv.getContext("2d");
 //Array of all existing cells
 var feed = new Array();
 var cells = new Array();
-
 
 //Superclass for all elements on screen, contains a position
 class Element {
@@ -54,6 +53,7 @@ class Cell extends Element {
     super(x, y, color);
     this.size = size;
     this.args = args;
+    this.offspring = 0;
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -62,16 +62,11 @@ class Cell extends Element {
     var cFood = 0;
     for ( var i = 0; i < feed.length; i++ ){
       //Eats food that can be eaten and finds closest non-eatable food.
-      if ( this.dist(feed[i])<=this.size ){
-        this.size+=0.1;
+      if ( this.dist(feed[i])<=this.size/2 ){
+        this.size=2*Math.sqrt(Math.pow(this.size/2, 2)+Math.PI/4);
         feed.splice(i, 1);
         i--;
-        feed.push(new Food(
-          randInt(0,canv.width),
-          randInt(0,canv.height),
-          randColor()
-        ));
-      }else if ( this.dist( feed[i] < this.dist( cFood ))) {
+      }else if ( this.dist( feed[i] ) < this.dist( feed[cFood] ) ) {
         cFood = i;
       }
     }
@@ -81,19 +76,20 @@ class Cell extends Element {
   //gets the closest bigger cell and smaller cell
   closestCells(){
     var sBig, sSmall;
-    //console.log(cells);
     for ( var i = 0; i < cells.length; i++ ){
       if ( this.dist(cells[i]) == 0 ){
         continue;
       }else if ( cells[i].size < this.size ) {
         if( typeof sSmall === 'undefined' || this.dist(cells[i])<this.dist(cells[sSmall])){
           if ( this.dist(cells[i]) <= this.size/2 ) {
-            this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(cells[i].size/2, 2));
-            cells.splice(i, 1);
-            if ( i < currId ) {
-              currId--;
+            if ( this.colDist(cells[i].color) > 4096 ){
+              this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(cells[i].size/2, 2));
+              cells.splice(i, 1);
+              if ( i < currId ) {
+                currId--;
+              }
+              i--;
             }
-            i--;
           }else {
             sSmall = i;
           }
@@ -107,14 +103,28 @@ class Cell extends Element {
     return [cells[sSmall], cells[sBig]];
   }
 
-  //Used to calculate movement speed
-  speed(){
-    return (1/this.size)*this.speed;
+  //returns absolute distance between color values
+  colDist(a){
+    return Math.abs(parseInt('0x'+a.substr(1).toUpperCase())-parseInt('0x'+this.color.substr(1).toUpperCase()));
   }
 
   //returns distance between a cell and this cell
   dist(a){
-    return Math.sqrt(Math.pow(this.x-a.x, 2)+Math.pow(this.y-a.y, 2));
+    var posX = Math.min(Math.abs(this.x-a.x), canv.width-Math.abs(this.x-a.x));
+    var posY = Math.min(Math.abs(this.y-a.y), canv.height-Math.abs(this.y-a.y));
+    return Math.sqrt(Math.pow(posX,2)+Math.pow(posY,2));
+ }
+
+  //returns distance between a cell and this cell as well as the point to aim for
+  compDist(a){
+    var points = [[a.x, a.y], [a.x+canv.width, a.y], [a.x-canv.width, a.y], [a.x, a.y+canv.height], [a.x, a.y-canv.height]];
+    var minId = 0;
+    for ( var i = 0; i < points.length; i++ ){
+      if ( Math.sqrt(Math.pow(this.x-points[i][0],2)+Math.pow(this.y-points[i][1],2)) < Math.sqrt(Math.pow(this.x-points[minId][0],2)+Math.pow(this.y-points[minId][1],2)) ){
+        minId = i;
+      }
+    }
+    return [Math.sqrt(Math.pow(this.x-points[minId][0],2)+Math.pow(this.y-points[minId][1],2)), points[minId][0], points[minId][1]];
   }
 
   //Checks whether condition is true
@@ -152,14 +162,16 @@ class Cell extends Element {
 
   //Creates a new cell with possibility of mutation
   reproduce(){
-    cells.push(newCell(this.size, this.color, this.args));
+    var fraction = randInt(100, 500)/1000; //Amount used to form child
+    cells.push(newCell(this.size*Math.sqrt(fraction), this.color, this.args));
+    this.size*=Math.sqrt(1-fraction);
   }
 
   //Cell moves according to its given rules.
   move(){
-    if ( this.size > 20 ){
-      this.size = Math.sqrt(Math.pow(this.size, 2)/2);
+    if ( randInt(this.size, 500) >=490  && this.size>50 ){
       this.reproduce();
+      this.offspring++;
     }
     var closest = this.closestCells();
     var all = {};
@@ -177,12 +189,13 @@ class Cell extends Element {
         for ( var j = 0; j < acts.length; j++ ){
           var targ = all[acts[j][1]];
           if ( typeof targ !== 'undefined' ){
+            var targDist = this.compDist(targ);
             if ( acts[j][0] == "goto" ){
-              changeX-=(this.x-targ.x)/this.dist(targ);
-              changeY-=(this.y-targ.y)/this.dist(targ);
+              changeX-=(this.x-targDist[1])/targDist[0];
+              changeY-=(this.y-targDist[2])/targDist[0];
             }else if ( acts[j][0] == "avoid" ) {
-              changeX+=(this.x-targ.x)/this.dist(targ);
-              changeY+=(this.y-targ.y)/this.dist(targ);
+              changeX+=(this.x-targDist[1])/targDist[0];
+              changeY+=(this.y-targDist[2])/targDist[0];
             }
           }
         }
@@ -196,16 +209,14 @@ class Cell extends Element {
       this.x-=5*(this.x-changeX)/Math.sqrt(Math.pow(this.x-changeX, 2)+Math.pow(this.y-changeY, 2));
       this.y-=5*(this.y-changeY)/Math.sqrt(Math.pow(this.x-changeX, 2)+Math.pow(this.y-changeY, 2));
     }
-    this.size-=0.025;
-    if ( isNaN(this.x) || isNaN(this.y) ){
-      this.reproduce();
+    var millionthLost = 0.5;
+    this.size-=2*Math.sqrt(Math.pow(this.size/2, 2)*(millionthLost/1000000));
+    if ( this.size <= 0 ||isNaN(this.x) || isNaN(this.y) ){
       cells.splice(currId, 1);
       currId--;
     }
-    if ( this.size <= 0 || isNaN(this.x) || isNaN(this.y) ){
-      cells.splice(currId, 1);
-      currId--;
-    }
+    this.x = ((this.x%canv.width)+canv.width)%canv.width;
+    this.y = ((this.y%canv.height)+canv.height)%canv.height;
     this.age++;
   }
 }
@@ -241,16 +252,20 @@ class Command {
 
 
 var currId = 0;
+var minWorldSize = 0;
 
 init();
 
 function init() {
   canv.width  = window.innerWidth;
   canv.height = window.innerHeight;
-  for (var i = 0; i < 100; i++){
-    cells.push(randomCell());
+  for (var i = 0; i < 200; i++){
+    cells.push(randomCell(randInt(1000,2000)/100));
+    minWorldSize+=Math.PI*Math.pow(cells[cells.length-1].size/2, 2);
   }
-  for (var i = 0; i < 2000; i++){
+  var numFood = 3000;
+  minWorldSize+=Math.PI/4*numFood;
+  for (var i = 0; i < numFood; i++){
     feed.push(new Food(
       randInt(0,canv.width),
       randInt(0,canv.height),
@@ -262,47 +277,75 @@ function init() {
 
 //Updates each frame
 function frame() {
-  changeOldest = false;
+  var oldest = cells[0];
+  var bigMama = cells[0];
+  var worldSize = 0;
+  context.clearRect(0, 0, canv.width, canv.height);
   for (var i = 0; i<feed.length; i++){
     context.beginPath();
     context.arc(feed[i].x, feed[i].y, 0.5, 0, 2 * Math.PI, false);
-    context.fillStyle = '#003300';
-    context.strokeStyle = '#003300';
+    context.fillStyle = feed[i].color;
+    context.strokeStyle = feed[i].color;
     context.stroke();
     context.fill();
     feed[i].ageInc(i);
+    worldSize+= Math.PI/4;
   }
-  var oldest = cells[0];
   for ( currId = 0; currId<cells.length; currId++ ){
-    if ( oldest.age+1 == cells[currId].age ){
-      oldest = cells[currId];
-    }else if ( oldest.age < cells[currId].age ){
-      oldest = cells[currId];
-      changeOldest = true;
-    }
     cells[currId].move();
-    context.beginPath();
-    context.arc(cells[currId].x, cells[currId].y, cells[currId].size/2, 0, 2 * Math.PI, false);
-    context.fillStyle = cells[currId].color;
-    context.strokeStyle = cells[currId].color;
-    context.stroke();
-    context.fill();
+    if ( typeof cells[currId] !== 'undefined' ){
+      if ( oldest.age < cells[currId].age ){
+        oldest = cells[currId];
+      }
+      if ( bigMama.offspring < cells[currId].offspring ){
+        bigMama = cells[currId];
+      }
+      context.beginPath();
+      context.arc(cells[currId].x, cells[currId].y, cells[currId].size/2, 0, 2 * Math.PI, false);
+      context.fillStyle = cells[currId].color;
+      context.strokeStyle = cells[currId].color;
+      context.stroke();
+      context.fill();
+      worldSize+=Math.PI*Math.pow(cells[currId].size/2,2);
+    }
   }
-  if (true){
-    //console.log(oldest);
+  while ( worldSize < minWorldSize ){
+    feed.push(new Food(
+      randInt(0,canv.width),
+      randInt(0,canv.height),
+      randColor()
+    ));
+    worldSize+=Math.PI/4;
+
+    var percentage = 1;
+    if ( randInt( 1, 10000 ) <= percentage*100 || feed.length>2500 ){
+      cells.push(randomCell(Math.max(10,Math.sqrt(((worldSize - feed.length*Math.PI/4)/cells.length)/Math.PI)+randInt(-10,10))));
+      worldSize+=Math.PI*Math.pow(cells[cells.length-1].size/2,2);
+    }
   }
-  //context.clearRect(0, 0, canv.width, canv.height);
-  context.fillStyle = '#8E8E8D';
-  context.globalAlpha = 0.025;
-  context.fillRect(0,0,canv.width,canv.height);
-  context.globalAlpha = 1.0;
+
+
+  context.beginPath();
+  context.arc(oldest.x, oldest.y, oldest.size/2+2.5, 0, 2 * Math.PI, false);
+  context.strokeStyle = "#FFD700";
+  context.lineWidth = 5;
+  context.stroke();
+
+  context.beginPath();
+  context.arc(bigMama.x, bigMama.y, Math.max(bigMama.size/2-2.5,0), 0, 2 * Math.PI, false);
+  context.strokeStyle = "#DC143C";
+  context.stroke();
+  context.lineWidth = 1;
+
+  console.log(oldest,bigMama);
+
   window.requestAnimationFrame(frame);
 }
 
 //Creates a random cell with random attributes
-function randomCell(){
+function randomCell(size){
   return new Cell(
-    randInt(1000,1500)/100, //size
+    size,                   //size
     randInt(0,canv.width),  //x
     randInt(0,canv.height), //y
     randColor(),            //color
@@ -425,7 +468,7 @@ function randColor() {
 
 //Returns a random int between min and max, inclusive.
 function randInt(min, max) {
-  return Math.floor(Math.random() * (max-min)+1)+min;
+  return Math.floor(Math.random() * (max-min+1))+min;
 }
 
 //Returns a random value in an array
