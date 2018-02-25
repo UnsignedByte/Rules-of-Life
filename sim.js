@@ -3,27 +3,31 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 17:19:47, 21-Feb-2018
+ * @Last modified time: 19:44:55, 24-Feb-2018
  */
 
 //the canvas
 var canv = document.getElementById('world');
 var context = canv.getContext("2d");
+console.log("mrnabas");
 //Array of all existing cells
+var feed = new Array();
+var cells = new Array();
 
 
 //Superclass for all elements on screen, contains a position
 class Element {
-  constructor(x, y){
+  constructor(x, y, color){
     this.x=x;
     this.y=y;
+    this.color = color;
   }
 }
 
 
 class Food extends Element {
-  constructor(x, y){
-    super(x, y, size);
+  constructor(x, y, color){
+    super(x, y, color);
     this.size = size;
   }
 }
@@ -41,23 +45,11 @@ class Cell extends Element {
    * speed is multiplier for the speed of the cell; Real speed determined by size
    * size is the size of the Cell
    */
-  constructor(metabolism, reproSize, speed, size, sight, x, y, args){
-    super(x, y);
-    this.id = cells.length;
+  constructor(size, x, y, color, args){
+    super(x, y, color);
     this.health = 1000;
-    this.metabolism = metabolism;
-    this.reproSize = reproSize;
-    this.speed = speed;
-    this.size = 10;
+    this.size = size;
     this.args = args;
-  }
-
-  //Cell moves according to its given rules.
-  move(){
-    var closest = this.closestCells();
-    var sSmall = closest[0];
-    var sBig = closest[1];
-    var cFood = this.closestFood();
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -66,10 +58,10 @@ class Cell extends Element {
     var cFood;
     for ( var i = 0; i < feed.length; i++ ){
       //Eats food that can be eaten and finds closest non-eatable food.
-      if ( dist(feed[i])<=this.size ){
+      if ( this.dist(feed[i])<=this.size ){
         this.health+=feed[i].size;
         eatable.push(i);
-      }else if ( dist( feed[i] < dist( cFood ))) {
+      }else if ( this.dist( feed[i] < this.dist( cFood ))) {
         cFood = i;
       }
     }
@@ -80,36 +72,97 @@ class Cell extends Element {
         feed.splice(eatable[i], 1);
       }
     }
-    return cFood;
+    return feed[cFood];
   }
 
   //gets the closest bigger cell and smaller cell
   closestCells(){
     var sBig, sSmall;
+    //console.log(cells);
     for ( var i = 0; i < cells.length; i++ ){
-      if ( this.id = cells[i].id ){
+      if ( this.dist(cells[i]) == 0 ){
         continue;
-      }else if ( cells[i].size < this.size && dist(cells[i])<dist(cells[sSmall]) ) {
-        sSmall = i;
-      }else if ( cells[i].size > this.size && dist(cells[i])<dist(cells[sBig]) ) {
-        sBig = i;
+      }else if ( cells[i].size < this.size ) {
+        if( typeof sSmall === 'undefined' || this.dist(cells[i])<this.dist(cells[sSmall])){
+          sSmall = i;
+        }
+      }else if ( cells[i].size > this.size ) {
+        if( typeof sBig === 'undefined' || this.dist(cells[i])<this.dist(cells[sBig])){
+          sBig = i;
+        }
       }
     }
-    return [sSmall, sBig];
+    return [cells[sSmall], cells[sBig]];
   }
 
   //Used to calculate movement speed
-  getSpeed(){
+  speed(){
     return (1/this.size)*this.speed;
   }
 
-  //Used to sort cellList by distance from this Cell
-  compare(a, b){
-    return this.dist(a)-this.dist(b);
-  }
   //returns distance between a cell and this cell
   dist(a){
     return Math.sqrt(Math.pow(this.x-a.x, 2)+Math.pow(this.y-a.y, 2));
+  }
+
+  //Checks whether condition is true
+  isCond(comm, all){
+    if ( typeof all[comm.condition[0]] === 'undefined' ){
+      return false;
+    }
+    switch (comm.condition[1]){
+      case 0:
+        if (this.dist(all[comm.condition[0]]) < comm.condition[2]){
+          return true;
+        }else{
+          return false;
+        }
+      case 1:
+        if (this.dist(all[comm.condition[0]]) <= comm.condition[2]){
+          return true;
+        }else{
+          return false;
+        }
+      case 2:
+        if (this.dist(all[comm.condition[0]]) >= comm.condition[2]){
+          return true;
+        }else{
+          return false;
+        }
+      case 3:
+        if (this.dist(all[comm.condition[0]]) > comm.condition[2]){
+          return true;
+        }else{
+          return false;
+        }
+    }
+  }
+
+  //Cell moves according to its given rules.
+  move(){
+    var closest = this.closestCells();
+    var all = {};
+    all["sSmall"] = closest[0];
+    all["sBig"] = closest[1];
+    all["cFood"] = this.closestFood();
+    for( var i = 0; i < this.args.length; i++ ) {
+      var comm = this.args[i];
+      if( this.isCond( comm, all ) ){
+        var acts = comm.actions;
+        for ( var j = 0; j < acts.length; j++ ){
+          var targ = all[acts[j][1]];
+          if ( typeof targ !== 'undefined' ){
+            if ( acts[j][0] == "goto" ){
+              this.x-=(this.x-targ.x)/this.dist(targ);
+              this.y-=(this.y-targ.y)/this.dist(targ);
+            }else if ( acts[j][0] == "avoid" ) {
+              this.x+=(this.x-targ.x)/this.dist(targ);
+              this.y+=(this.y-targ.y)/this.dist(targ);
+            }
+          }
+        }
+      }
+    }
   }
 }
 
@@ -127,15 +180,12 @@ class Command {
 
 
 
-
-var feed = new Array();
-var cells = new Array();
 init();
 
 function init() {
   canv.width  = window.innerWidth;
   canv.height = window.innerHeight;
-  for (var i = 0; i < 100; i++){
+  for (var i = 0; i < 1000; i++){
     cells.push(randomCell());
   }
   window.requestAnimationFrame(frame);
@@ -146,35 +196,34 @@ function frame() {
   for (var i = 0; i<cells.length; i++){
     context.beginPath();
     context.arc(cells[i].x, cells[i].y, cells[i].size/2, 0, 2 * Math.PI, false);
-    context.fillStyle = '#003300';
-    context.strokeStyle = '#003300';
+    context.fillStyle = cells[i].color;
+    context.strokeStyle = cells[i].color;
     context.stroke();
     context.fill();
-    cells[i].id = i;
     cells[i].move();
   }
   for (var i = 0; i<feed.length; i++){
     context.beginPath();
-    context.arc(cells[i].x, cells[i].y, cells[i].size/2, 0, 2 * Math.PI, false);
+    context.arc(feed[i].x, feed[i].y, 0.5, 0, 2 * Math.PI, false);
     context.fillStyle = '#003300';
     context.strokeStyle = '#003300';
     context.stroke();
     context.fill();
-    cells[i].move();
   }
+  context.fillStyle = '#8E8E8D';
+  context.globalAlpha = 0.025;
+  context.fillRect(0,0,canv.width,canv.height);
+  context.globalAlpha = 1.0;
   window.requestAnimationFrame(frame);
 }
 
 //Creates a random cell with random attributes
 function randomCell(){
   return new Cell(
-    randInt(1,10)/10,       //metabolism
-    randInt(50,500),        //reproSize
-    randInt(1,10),          //speed
-    randInt(10,15),         //size
-    randInt(0,25),          //sight
+    randInt(1000,1500)/100, //size
     randInt(0,canv.width),  //x
     randInt(0,canv.height), //y
+    randColor(),            //color of trail
     randCommands(10)        //args
   );
 }
@@ -182,7 +231,7 @@ function randomCell(){
 //Creates an array of num random commands
 function randCommands(num){
   comms = new Array();
-  for ( int i = 0; i < num; i++){
+  for ( var i = 0; i < num; i++){
     comms.push(randCommand());
   }
   return comms;
@@ -192,15 +241,19 @@ function randCommands(num){
 function randCommand(){
   var actions = ["avoid", "goto"];
   var subjects = ["sBig", "sSmall", "cFood"];
-  var comparisons = ["<", "<=", ">=", ">"];
 
-  var condition = "dist("+randVal(subjects)+")"+randVal(comparisons)+randInt(0, 100);
+  var condition = [randVal(subjects),randInt(0,3),randInt(0, 100)];
   var action = new Array(randInt(1,5));
   for( var i = 0; i < action.length; i++){
-    action[i] = randVal(actions)+" "+randVal(subjects);
+    action[i] = [randVal(actions),randVal(subjects)];
   }
 
   return new Command(condition, action);
+}
+
+//Returns a random hex color
+function randColor() {
+  return '#'+(Math.random()*0xFFFFFF<<0).toString(16)
 }
 
 //Returns a random int between min and max, inclusive.
