@@ -3,13 +3,14 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 18:40:39, 25-Feb-2018
+ * @Last modified time: 21:03:33, 25-Feb-2018
  */
 
 //the canvas
 var canv = document.getElementById('world');
 var context = canv.getContext("2d");
-//Array of all existing cells
+//Array of all existing elements
+var holes = new Array();
 var feed = new Array();
 var cells = new Array();
 
@@ -24,6 +25,51 @@ class Element {
 }
 
 
+//Hole class that kills all cells touching it
+class Hole extends Element {
+  constructor(x, y, size){
+    super(x, y, '#000000');
+    this.size = size;
+    this.direction = randInt(1, 360);
+  }
+
+  //kills unlucky passerby cells
+  killCells(){
+    for ( var i = 0; i < cells.length; i++ ){
+      if ( this.dist(cells[i])<=this.size/2 && this.size>cells[i].size ){
+        this.age--;
+        cells.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  //returns distance between a cell and this hole
+  dist(a){
+    var posX = Math.min(Math.abs(this.x-a.x), canv.width-Math.abs(this.x-a.x));
+    var posY = Math.min(Math.abs(this.y-a.y), canv.height-Math.abs(this.y-a.y));
+    this.age++;
+    if ( this.age >= randInt(50000, 100000) ){
+      this.x = randInt(0, canv.width);
+      this.y = randInt(0, canv.height);
+      this.size = randInt(25, 50);
+      this.direction = randInt(1, 360);
+      this.age = 0;
+    }
+    return Math.sqrt(Math.pow(posX,2)+Math.pow(posY,2));
+  }
+
+  //Move each frame
+  move(){
+    this.killCells();
+    this.direction+=randInt(-30, 30);
+    this.x+=5*Math.cos(this.direction/180*Math.PI);
+    this.y+=5*Math.sin(this.direction/180*Math.PI);
+  }
+}
+
+
+//Food class
 class Food extends Element {
   constructor(x, y, color){
     super(x, y, color);
@@ -72,6 +118,17 @@ class Cell extends Element {
       }
     }
     return feed[cFood];
+  }
+
+  //gets the closest hole
+  closestHole(){
+    var nHole = holes[0];
+    for ( var i = 1; i < holes.length; i++ ){
+      if ( this.dist(holes[i]) < this.dist(nHole) ){
+        nHole = holes[i];
+      }
+    }
+    return nHole;
   }
 
   //gets the closest bigger cell and smaller cell
@@ -183,55 +240,46 @@ class Cell extends Element {
 
   //Cell moves according to its given rules.
   move(){
-    if ( randInt(this.size, 500) >=490  && this.size>50 ){
+    if ( randInt(Math.min(this.size, 500), 500) >=490  && this.size>50 ){
       this.reproduce();
       this.offspring++;
     }
     var closest = this.closestCells();
     var all = {};
+    all["cHole"] = this.closestHole();
     all["sSmall"] = closest[0];
     all["sBig"] = closest[1];
     all["cFood"] = this.closestFood();
     var anyPos = true;
-    var changeX = this.x;
-    var changeY = this.y;
     this.combine = false;
     for( var i = 0; i < this.args.length; i++ ) {
       var comm = this.args[i];
       if( this.isCond( comm, all ) ){
-        anyPos = false;
-        var acts = comm.actions;
-        for ( var j = 0; j < acts.length; j++ ){
-          var targ = all[acts[j][1]];
-          if ( typeof targ !== 'undefined' ){
-            var targDist = this.compDist(targ);
-            if ( acts[j][0] == "goto" ){
-              changeX-=(this.x-targDist[1])/targDist[0];
-              changeY-=(this.y-targDist[2])/targDist[0];
-            }else if ( acts[j][0] == "avoid" ) {
-              changeX+=(this.x-targDist[1])/targDist[0];
-              changeY+=(this.y-targDist[2])/targDist[0];
-            }else if ( acts[j][0] == "combine" ) {
-              this.combine = true;
-            }
+        var targ = all[comm.action[1]];
+        if ( typeof targ !== 'undefined' ){
+          var targDist = this.compDist(targ);
+          if ( comm.action[0] == "goto" ){
+            anyPos = false;
+            this.x-=5*(this.x-targDist[1])/targDist[0];
+            this.y-=5*(this.y-targDist[2])/targDist[0];
+          }else if ( comm.action[0] == "avoid" ) {
+            anyPos = false;
+            this.x+=5*(this.x-targDist[1])/targDist[0];
+            this.y+=5*(this.y-targDist[2])/targDist[0];
+          }else if ( comm.action[0] == "combine" ) {
+            this.combine = true;
           }
         }
+        break;
       }
     }
     if ( anyPos ){
       var deg = randInt(1,360);
-      this.x+=Math.sin(deg/180 * Math.PI);
-      this.y+=Math.cos(deg/180 * Math.PI);
-    }else{
-      this.x-=5*(this.x-changeX)/Math.sqrt(Math.pow(this.x-changeX, 2)+Math.pow(this.y-changeY, 2));
-      this.y-=5*(this.y-changeY)/Math.sqrt(Math.pow(this.x-changeX, 2)+Math.pow(this.y-changeY, 2));
+      this.x+=5*Math.sin(deg/180 * Math.PI);
+      this.y+=5*Math.cos(deg/180 * Math.PI);
     }
     var millionthLost = 0.5;
     this.size-=2*Math.sqrt(Math.pow(this.size/2, 2)*(millionthLost/1000000));
-    if ( this.size <= 0 ||isNaN(this.x) || isNaN(this.y) ){
-      cells.splice(currId, 1);
-      currId--;
-    }
     this.x = ((this.x%canv.width)+canv.width)%canv.width;
     this.y = ((this.y%canv.height)+canv.height)%canv.height;
     this.age++;
@@ -240,9 +288,9 @@ class Cell extends Element {
 
 //Class containing a rule the cell must follow
 class Command {
-  constructor ( condition, actions ){
+  constructor ( condition, action ){
     this.condition = condition;
-    this.actions = actions;
+    this.action = action;
   }
 }
 
@@ -274,8 +322,14 @@ var minWorldSize = 0;
 init();
 
 function init() {
-  canv.width  = 0.75*window.innerWidth;
-  canv.height = window.innerHeight;
+  canv.width  = window.innerWidth;
+  canv.height = 0.75*window.innerHeight;
+  for ( var i = 0; i < 5; i++ ){
+    holes.push(new Hole(
+      randInt(0, canv.width),
+      randInt(0, canv.height),
+      randInt(10, 50)));
+  }
   for (var i = 0; i < 200; i++){
     cells.push(randomCell(randInt(1000,2000)/100));
     minWorldSize+=Math.PI*Math.pow(cells[cells.length-1].size/2, 2);
@@ -333,6 +387,15 @@ function frame() {
       }
       worldSize+=Math.PI*Math.pow(cells[currId].size/2,2);
     }
+  }
+  for ( var i = 0; i < holes.length; i++ ){
+    context.beginPath();
+    context.fillStyle = holes[i].color;
+    context.strokeStyle = holes[i].color;
+    context.arc(holes[i].x, holes[i].y, holes[i].size/2, 0, 2 * Math.PI, false);
+    context.stroke();
+    context.fill();
+    holes[i].move();
   }
   while ( worldSize < minWorldSize ){
     feed.push(new Food(
@@ -418,7 +481,7 @@ function newCell(size, x, y, color, comms){
 
 //Creates possibly mutated command
 function newCommand(comm){
-  var action = ["avoid", "goto"];
+  var actions = ["avoid", "goto"];
   var subjects = ["sBig", "sSmall", "cFood"];
 
   var percentage = 1; //Chance of change in subject
@@ -443,45 +506,30 @@ function newCommand(comm){
     condition[2] += randInt(0, 200);
   }
 
-  var actions = comm.actions;
-  for ( var i = 0; i < actions.length; i++ ){
+  var action = comm.action;
 
-    percentage = 2; //Chance of change in action
-    if ( randInt( 1, 10000 ) <= percentage*100 ){
-      actions[i][0] = randVal(action);
-    }
-
-
-    percentage = 1; //Chance of change in target
-    if ( randInt( 1, 10000 ) <= percentage*100 ){
-      actions[i][1] = randVal(subjects);
-    }
-
-    percentage = 0.5; //Chance of change in target
-    for ( var j = 0; j < 5; j++ ){
-      if ( randInt( 1, 10000 ) <= percentage*100 ){
-        actions.splice(-1,1);
-      }
-        if ( randInt( 1, 10000 ) <= percentage*100 || actions.length == 0 ){
-          actions.push([randVal(action), randVal(subjects)]);
-        }
-    }
-
+  percentage = 2; //Chance of change in action
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    action[0] = randVal(actions);
   }
 
-  return new Command(condition, actions);
+
+  percentage = 1; //Chance of change in target
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    action[1] = randVal(subjects);
+  }
+
+
+  return new Command(condition, action);
 }
 
 //Creates a random command
 function randCommand(){
   var actions = ["combine", "avoid", "goto"];
-  var subjects = ["sBig", "sSmall", "cFood"];
+  var subjects = ["sBig", "sSmall", "cFood", "cHole"];
 
   var condition = [randVal(subjects),randInt(0,3),randInt(0, 100)];
-  var action = new Array(randInt(1,3));
-  for( var i = 0; i < action.length; i++){
-    action[i] = [randVal(actions),randVal(subjects)];
-  }
+  var  action = [randVal(actions),randVal(subjects)];
 
   return new Command(condition, action);
 }
