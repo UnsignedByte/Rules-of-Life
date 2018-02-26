@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 21:32:27, 25-Feb-2018
+ * @Last modified time: 21:48:55, 25-Feb-2018
  */
 
 //the canvas
@@ -95,12 +95,13 @@ class Cell extends Element {
    * (x,y) is the position of the Cell
    * color is the cell trail color
    */
-  constructor(size, x, y, color, args){
+  constructor(size, x, y, color, args, defComm){
     super(x, y, color);
     this.size = size;
     this.args = args;
     this.offspring = 0;
     this.combine = false;
+    this.defComm = defComm;
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -234,7 +235,7 @@ class Cell extends Element {
   //Creates a new cell with possibility of mutation
   reproduce(){
     var fraction = randInt(100, 500)/1000; //Amount used to form child
-    cells.push(newCell(this.size*Math.sqrt(fraction), this.x, this.y, this.color, this.args));
+    cells.push(newCell(this.size*Math.sqrt(fraction), this.x, this.y, this.color, this.args, this.defComm));
     this.size*=Math.sqrt(1-fraction);
   }
 
@@ -274,9 +275,23 @@ class Cell extends Element {
       }
     }
     if ( anyPos ){
-      var deg = randInt(1,360);
-      this.x+=5*Math.sin(deg/180 * Math.PI);
-      this.y+=5*Math.cos(deg/180 * Math.PI);
+      var targ = all[this.defComm.action[1]];
+      while ( typeof targ == 'undefined' ){
+        this.defComm.action[1] = randVal(['cHole', 'sSmall', 'sBig', 'cFood']);
+        targ = all[this.defComm.action[1]];
+      }
+      var targDist = this.compDist(targ);
+      if ( this.defComm.action[0] == "goto" ){
+        anyPos = false;
+        this.x-=5*(this.x-targDist[1])/targDist[0];
+        this.y-=5*(this.y-targDist[2])/targDist[0];
+      }else if ( this.defComm.action[0] == "avoid" ) {
+        anyPos = false;
+        this.x+=5*(this.x-targDist[1])/targDist[0];
+        this.y+=5*(this.y-targDist[2])/targDist[0];
+      }else if ( this.defComm.action[0] == "combine" ) {
+        this.combine = true;
+      }
     }
     if ( isNaN(this.size) ){
       console.log("WHY");
@@ -440,7 +455,8 @@ function randomCell(size){
     randInt(0,canv.width),  //x
     randInt(0,canv.height), //y
     randColor(),            //color
-    randCommands(10)        //args
+    randCommands(10),       //args
+    randCommand()
   );
 }
 
@@ -454,7 +470,7 @@ function randCommands(num){
 }
 
 //Creates commands with chance of mutation
-function newCell(size, x, y, color, comms){
+function newCell(size, x, y, color, comms, defComm){
   newComms = new Array();
   for ( var i = 0; i < comms.length; i++ ){
     newComms.push(newCommand(comms[i]));
@@ -485,7 +501,7 @@ function newCell(size, x, y, color, comms){
     }
   }
 
-  return new Cell (size, x, y, newColor, newComms);
+  return new Cell (size, x, y, newColor, newComms, newCommand(defComm));
 }
 
 //Creates possibly mutated command
