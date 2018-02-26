@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 21:03:33, 25-Feb-2018
+ * @Last modified time: 21:28:57, 25-Feb-2018
  */
 
 //the canvas
@@ -147,7 +147,7 @@ class Cell extends Element {
                 currId--;
               }
               i--;
-            }else if ( this.combine && this.age % 500 == 0 ){
+            }else if ( this.combine && randInt(0, 500) == 0 ){
               this.age = Math.max(cells[i].age, this.age);
               this.offspring += cells[i].offspring;
               this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(cells[i].size/2, 2));
@@ -277,6 +277,9 @@ class Cell extends Element {
       var deg = randInt(1,360);
       this.x+=5*Math.sin(deg/180 * Math.PI);
       this.y+=5*Math.cos(deg/180 * Math.PI);
+    }
+    if ( isNaN(this.size) ){
+      console.log("WHY");
     }
     var millionthLost = 0.5;
     this.size-=2*Math.sqrt(Math.pow(this.size/2, 2)*(millionthLost/1000000));
@@ -457,10 +460,17 @@ function newCell(size, x, y, color, comms){
     newComms.push(newCommand(comms[i]));
   }
 
-  var percentage = 10; //Chance of change in color
+  var newColor;
+
+  var percentage = 25; //Chance of change in color
   if ( randInt( 1, 10000 ) <= percentage*100 ){
     var col = '0x'+color.substr(1).toUpperCase();
-    color = '#'+(parseInt(col)+randInt(-4096,4096)).toString(16)
+    newColor = '#'+(parseInt(col)+randInt(-4096,4096)).toString(16)
+  }
+
+  var percentage = 1; //Chance of completely random color
+  if ( randInt( 1, 10000 ) <= percentage*100 ){
+    newColor = randColor();
   }
 
 
@@ -476,7 +486,7 @@ function newCell(size, x, y, color, comms){
     }
   }
 
-  return new Cell (size, x, y, color, newComms);
+  return new Cell (size, x, y, newColor, newComms);
 }
 
 //Creates possibly mutated command
