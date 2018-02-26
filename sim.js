@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 13:44:06, 25-Feb-2018
+ * @Last modified time: 18:40:39, 25-Feb-2018
  */
 
 //the canvas
@@ -54,6 +54,7 @@ class Cell extends Element {
     this.size = size;
     this.args = args;
     this.offspring = 0;
+    this.combine = false;
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -89,14 +90,27 @@ class Cell extends Element {
                 currId--;
               }
               i--;
+            }else if ( this.combine && this.age % 500 == 0 ){
+              this.age = Math.max(cells[i].age, this.age);
+              this.offspring += cells[i].offspring;
+              this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(cells[i].size/2, 2));
+              cells.splice(i, 1);
+              if ( i < currId ) {
+                currId--;
+              }
+              i--;
             }
           }else {
-            sSmall = i;
+            if ( this.colDist(cells[i].color) > 4096 ){
+              sSmall = i;
+            }
           }
         }
       }else if ( cells[i].size > this.size ) {
         if( typeof sBig === 'undefined' || this.dist(cells[i])<this.dist(cells[sBig])){
-          sBig = i;
+          if ( this.colDist(cells[i].color) > 4096 ){
+            sBig = i;
+          }
         }
       }
     }
@@ -163,7 +177,7 @@ class Cell extends Element {
   //Creates a new cell with possibility of mutation
   reproduce(){
     var fraction = randInt(100, 500)/1000; //Amount used to form child
-    cells.push(newCell(this.size*Math.sqrt(fraction), this.color, this.args));
+    cells.push(newCell(this.size*Math.sqrt(fraction), this.x, this.y, this.color, this.args));
     this.size*=Math.sqrt(1-fraction);
   }
 
@@ -181,6 +195,7 @@ class Cell extends Element {
     var anyPos = true;
     var changeX = this.x;
     var changeY = this.y;
+    this.combine = false;
     for( var i = 0; i < this.args.length; i++ ) {
       var comm = this.args[i];
       if( this.isCond( comm, all ) ){
@@ -196,6 +211,8 @@ class Cell extends Element {
             }else if ( acts[j][0] == "avoid" ) {
               changeX+=(this.x-targDist[1])/targDist[0];
               changeY+=(this.y-targDist[2])/targDist[0];
+            }else if ( acts[j][0] == "combine" ) {
+              this.combine = true;
             }
           }
         }
@@ -257,7 +274,7 @@ var minWorldSize = 0;
 init();
 
 function init() {
-  canv.width  = window.innerWidth;
+  canv.width  = 0.75*window.innerWidth;
   canv.height = window.innerHeight;
   for (var i = 0; i < 200; i++){
     cells.push(randomCell(randInt(1000,2000)/100));
@@ -283,9 +300,9 @@ function frame() {
   context.clearRect(0, 0, canv.width, canv.height);
   for (var i = 0; i<feed.length; i++){
     context.beginPath();
-    context.arc(feed[i].x, feed[i].y, 0.5, 0, 2 * Math.PI, false);
     context.fillStyle = feed[i].color;
     context.strokeStyle = feed[i].color;
+    context.arc(feed[i].x, feed[i].y, 0.5, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
     feed[i].ageInc(i);
@@ -300,12 +317,20 @@ function frame() {
       if ( bigMama.offspring < cells[currId].offspring ){
         bigMama = cells[currId];
       }
-      context.beginPath();
-      context.arc(cells[currId].x, cells[currId].y, cells[currId].size/2, 0, 2 * Math.PI, false);
       context.fillStyle = cells[currId].color;
       context.strokeStyle = cells[currId].color;
-      context.stroke();
-      context.fill();
+      var points = [
+        [cells[currId].x, cells[currId].y],
+        [cells[currId].x+canv.width, cells[currId].y],
+        [cells[currId].x-canv.width, cells[currId].y],
+        [cells[currId].x, cells[currId].y+canv.height],
+        [cells[currId].x, cells[currId].y-canv.height]]
+      for ( var j = 0; j < points.length; j++ ){
+        context.beginPath();
+        context.arc(points[j][0], points[j][1], cells[currId].size/2, 0, 2 * Math.PI, false);
+        context.stroke();
+        context.fill();
+      }
       worldSize+=Math.PI*Math.pow(cells[currId].size/2,2);
     }
   }
@@ -363,7 +388,7 @@ function randCommands(num){
 }
 
 //Creates commands with chance of mutation
-function newCell(size, color, comms){
+function newCell(size, x, y, color, comms){
   newComms = new Array();
   for ( var i = 0; i < comms.length; i++ ){
     newComms.push(newCommand(comms[i]));
@@ -388,7 +413,7 @@ function newCell(size, color, comms){
     }
   }
 
-  return new Cell (size, randInt(0, canv.width), randInt(0, canv.height), color, newComms);
+  return new Cell (size, x, y, color, newComms);
 }
 
 //Creates possibly mutated command
@@ -449,7 +474,7 @@ function newCommand(comm){
 
 //Creates a random command
 function randCommand(){
-  var actions = ["avoid", "goto"];
+  var actions = ["combine", "avoid", "goto"];
   var subjects = ["sBig", "sSmall", "cFood"];
 
   var condition = [randVal(subjects),randInt(0,3),randInt(0, 100)];
