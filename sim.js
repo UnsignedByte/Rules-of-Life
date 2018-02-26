@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 21:28:57, 25-Feb-2018
+ * @Last modified time: 21:32:27, 25-Feb-2018
  */
 
 //the canvas
@@ -460,19 +460,18 @@ function newCell(size, x, y, color, comms){
     newComms.push(newCommand(comms[i]));
   }
 
-  var newColor;
+  var newColor = color;
 
   var percentage = 25; //Chance of change in color
   if ( randInt( 1, 10000 ) <= percentage*100 ){
     var col = '0x'+color.substr(1).toUpperCase();
-    newColor = '#'+(parseInt(col)+randInt(-4096,4096)).toString(16)
+    newColor = '#'+(parseInt(col)+randInt(-4096,4096)).toString(16);
   }
 
   var percentage = 1; //Chance of completely random color
   if ( randInt( 1, 10000 ) <= percentage*100 ){
     newColor = randColor();
   }
-
 
   for ( i = 0; i < randInt(0,5); i++ ){
     percentage = 0.5; //Chance of losing a command
