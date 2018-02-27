@@ -526,6 +526,11 @@ function frame() {
     context.arc(feed[i].x * sizeRatio, feed[i].y * sizeRatio, feed[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
+    if (feed[i].age > 1000){
+      feed.splice(i, 1);
+      i--;
+    }
+    feed[i].age++;
   }
   context.globalAlpha = 0.5;
   for (currId = 0; currId < cells.length; currId++) {
