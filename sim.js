@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 17:01:44, 26-Feb-2018
+ * @Last modified time: 17:50:25, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -13,6 +13,11 @@ var petris = new Array();
 var holes = new Array();
 var feed = new Array();
 var cells = new Array();
+
+//Virtual canvas
+var worldWidth;
+var worldHeight;
+var sizeRatio;
 
 //Superclass for all elements on screen, contains a position
 class Element {
@@ -26,9 +31,9 @@ class Element {
 
   //returns distance between a cell and this cell
   dist(a) {
-    var posX = Math.min(Math.abs(this.x - a.x), canv.width - Math.abs(this.x - a.x));
-    var posY = Math.min(Math.abs(this.y - a.y), canv.height - Math.abs(this.y - a.y));
-    return Math.sqrt(Math.pow(posX, 2) + Math.pow(posY, 2));
+    var posX = Math.min(Math.abs(this.x - a.x), worldWidth - Math.abs(this.x - a.x));
+    var posY = Math.min(Math.abs(this.y - a.y), worldHeight - Math.abs(this.y - a.y));
+    return Math.pow(posX, 2) + Math.pow(posY, 2);
   }
 }
 
@@ -43,13 +48,13 @@ class Petri extends Element {
   //kills smaller unlucky passerby cells and feed
   killCells() {
     for (var i = 0; i < cells.length; i++) {
-      if (this.dist(cells[i]) <= this.size / 2 && this.size > cells[i].size) {
+      if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size > cells[i].size) {
         cells.splice(i, 1);
         i--;
       }
     }
     for (var i = 0; i < feed.length; i++) {
-      if (this.dist(feed[i]) <= this.size / 2 ) {
+      if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2) ) {
         feed.splice(i, 1);
         i--;
       }
@@ -69,7 +74,7 @@ class Hole extends Element {
   //teleports smaller passerby cells
   tpCells() {
     for (var i = 0; i < cells.length; i++) {
-      if (this.dist(cells[i]) <= this.size / 2 && this.size > cells[i].size && cells[i].coolDown == 0) {
+      if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size > cells[i].size && cells[i].coolDown == 0) {
         var targHole = randVal(holes);
         cells[i].x = targHole.x;
         cells[i].y = targHole.y;
@@ -86,8 +91,8 @@ class Hole extends Element {
     this.y += 5 * Math.sin(this.direction / 180 * Math.PI);
     this.age++;
     if (this.age >= randInt(50000, 100000)) {
-      this.x = randInt(0, canv.width);
-      this.y = randInt(0, canv.height);
+      this.x = randInt(0, worldWidth);
+      this.y = randInt(0, worldHeight);
       this.size = randInt(25, 50);
       this.direction = randInt(1, 360);
       this.age = 0;
@@ -107,8 +112,8 @@ class Food extends Element {
     if (this.age > 1000) {
       feed[i] = new Food(
         randInt(1, 10),
-        randInt(0, canv.width),
-        randInt(0, canv.height),
+        randInt(0, worldWidth),
+        randInt(0, worldHeight),
         randColor());
     }
   }
@@ -138,7 +143,7 @@ class Cell extends Element {
     var cFood = 0;
     for (var i = 0; i < feed.length; i++) {
       //Eats food that can be eaten and finds closest non-eatable food.
-      if (this.dist(feed[i]) <= this.size / 2) {
+      if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
         this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(feed[i].size / 2, 2));
         feed.splice(i, 1);
         i--;
@@ -182,7 +187,7 @@ class Cell extends Element {
           }
         }
         if (typeof sSmall === 'undefined' || this.dist(cells[i]) < this.dist(cells[sSmall])) {
-          if (this.dist(cells[i]) <= this.size / 2 ) {
+          if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) ) {
             if (this.colDist(cells[i].color) > 4096) {
               this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
               cells.splice(i, 1);
@@ -234,10 +239,10 @@ class Cell extends Element {
   compDist(a) {
     var points = [
       [a.x, a.y],
-      [a.x + canv.width, a.y],
-      [a.x - canv.width, a.y],
-      [a.x, a.y + canv.height],
-      [a.x, a.y - canv.height]
+      [a.x + worldWidth, a.y],
+      [a.x - worldWidth, a.y],
+      [a.x, a.y + worldHeight],
+      [a.x, a.y - worldHeight]
     ];
     var minId = 0;
     for (var i = 0; i < points.length; i++) {
@@ -259,25 +264,25 @@ class Cell extends Element {
     }
     switch (comm.condition[1]) {
       case 0:
-        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 < comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
           return true;
         } else {
           return false;
         }
       case 1:
-        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 <= comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
           return true;
         } else {
           return false;
         }
       case 2:
-        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 >= comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
           return true;
         } else {
           return false;
         }
       case 3:
-        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 > comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
           return true;
         } else {
           return false;
@@ -363,8 +368,8 @@ class Cell extends Element {
     }
     var millionthLost = 0.5;
     this.size -= 2 * Math.sqrt(Math.pow(this.size / 2, 2) * (millionthLost / 1000000));
-    this.x = ((this.x % canv.width) + canv.width) % canv.width;
-    this.y = ((this.y % canv.height) + canv.height) % canv.height;
+    this.x = ((this.x % worldWidth) + worldWidth) % worldWidth;
+    this.y = ((this.y % worldHeight) + worldHeight) % worldHeight;
     this.age++;
     if (this.coolDown > 0) {
       this.coolDown--;
@@ -401,28 +406,30 @@ init();
 function init() {
   canv.width = window.innerWidth;
   canv.height = 0.75 * window.innerHeight;
+  setWorld(3000);
+
   for (var i = 0; i < 5; i++) {
     holes.push(new Hole(
-      randInt(0, canv.width),
-      randInt(0, canv.height),
+      randInt(0, worldWidth),
+      randInt(0, worldHeight),
       randInt(10, 50)));
   }
   for (var i = 0; i < 5; i++) {
     petris.push(new Petri(
       randInt(100, 150),
-      randInt(0, canv.width),
-      randInt(0, canv.height)));
+      randInt(0, worldWidth),
+      randInt(0, worldHeight)));
   }
-  for (var i = 0; i < 1000; i++) {
+  for (var i = 0; i < worldWidth/5; i++) {
     cells.push(randomCell(randInt(1000, 2000) / 100));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
-  var numFood = 1000;
+  var numFood = worldWidth/2;
   for (var i = 0; i < numFood; i++) {
     feed.push(new Food(
       randInt(1, 10),
-      randInt(0, canv.width),
-      randInt(0, canv.height),
+      randInt(0, worldWidth),
+      randInt(0, worldHeight),
       randColor()
     ));
     minWorldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
@@ -441,7 +448,7 @@ function frame() {
     context.beginPath();
     context.fillStyle = feed[i].color;
     context.strokeStyle = feed[i].color;
-    context.arc(feed[i].x, feed[i].y, feed[i].size / 2, 0, 2 * Math.PI, false);
+    context.arc(feed[i].x*sizeRatio, feed[i].y*sizeRatio, feed[i].size*sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
     feed[i].ageInc(i);
@@ -465,7 +472,7 @@ function frame() {
       var points = getPoints(cells[currId]);
       for (var j = 0; j < points.length; j++) {
         context.beginPath();
-        context.arc(points[j][0], points[j][1], cells[currId].size / 2, 0, 2 * Math.PI, false);
+        context.arc(points[j][0]*sizeRatio, points[j][1]*sizeRatio, cells[currId].size*sizeRatio / 2, 0, 2 * Math.PI, false);
         context.stroke();
         context.fill();
       }
@@ -477,7 +484,7 @@ function frame() {
     context.beginPath();
     context.fillStyle = holes[i].color;
     context.strokeStyle = holes[i].color;
-    context.arc(holes[i].x, holes[i].y, holes[i].size / 2, 0, 2 * Math.PI, false);
+    context.arc(holes[i].x*sizeRatio, holes[i].y*sizeRatio, holes[i].size*sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
     holes[i].move();
@@ -489,7 +496,7 @@ function frame() {
     context.strokeStyle = petris[i].color;
     for (var j = 0; j < points.length; j++) {
       context.beginPath();
-      context.arc(points[j][0], points[j][1], petris[i].size / 2, 0, 2 * Math.PI, false);
+      context.arc(points[j][0]*sizeRatio, points[j][1]*sizeRatio, petris[i].size*sizeRatio / 2, 0, 2 * Math.PI, false);
       context.globalAlpha = 0.5;
       context.stroke();
       context.globalAlpha = 0.25;
@@ -502,8 +509,8 @@ function frame() {
   while (worldSize < minWorldSize) {
     feed.push(new Food(
       randInt(1, 10),
-      randInt(0, canv.width),
-      randInt(0, canv.height),
+      randInt(0, worldWidth),
+      randInt(0, worldHeight),
       randColor()
     ));
     worldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
@@ -521,7 +528,7 @@ function frame() {
 
   for ( var i = 0; i < points.length; i++ ){
     context.beginPath();
-    context.arc(points[i][0], points[i][1], oldest.size / 2 + 2.5, 0, 2 * Math.PI, false);
+    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, oldest.size*sizeRatio / 2 + 2.5, 0, 2 * Math.PI, false);
     context.strokeStyle = "#FFD700";
     context.stroke();
   }
@@ -530,7 +537,7 @@ function frame() {
 
   for ( var i = 0; i < points.length; i++ ){
     context.beginPath();
-    context.arc(points[i][0], points[i][1], Math.max(bigMama.size / 2 - 2.5, 0), 0, 2 * Math.PI, false);
+    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(bigMama.size*sizeRatio / 2 - 2.5, 0), 0, 2 * Math.PI, false);
     context.strokeStyle = "#4286f4";
     context.stroke();
   }
@@ -540,7 +547,7 @@ function frame() {
   context.lineWidth = 5;
   for ( var i = 0; i < points.length; i++ ){
     context.beginPath();
-    context.arc(points[i][0], points[i][1], Math.max(biggest.size / 2, 0), 0, 2 * Math.PI, false);
+    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(biggest.size*sizeRatio / 2, 0), 0, 2 * Math.PI, false);
     context.strokeStyle = "#129115";
     context.stroke();
   }
@@ -571,14 +578,20 @@ function displayCell(cell, id) {
 }
 
 
+function setWorld(wid){
+  worldWidth = wid;
+  worldHeight = canv.height/canv.width * worldWidth;
+  sizeRatio = canv.width/worldWidth;
+}
+
 //return list of points used for rendering
 function getPoints (obj){
   return [
     [obj.x, obj.y],
-  [obj.x + canv.width, obj.y],
-  [obj.x - canv.width, obj.y],
-  [obj.x, obj.y + canv.height],
-  [obj.x, obj.y - canv.height]
+  [obj.x + worldWidth, obj.y],
+  [obj.x - worldWidth, obj.y],
+  [obj.x, obj.y + worldHeight],
+  [obj.x, obj.y - worldHeight]
 ];
 }
 
@@ -586,9 +599,9 @@ function getPoints (obj){
 function randomCell(size) {
   return new Cell(
     size, //size
-    randInt(0, canv.width), //x
-    randInt(0, canv.height), //y
-    randColor(), //color
+    randInt(0, worldWidth),      //x
+    randInt(0, worldHeight),     //y
+    randColor(),                 //color
     randCommands(randInt(1, 9)), //args
     randCommand()
   );
@@ -698,15 +711,15 @@ function newCommand(comm) {
     condition[0] = randVal(subjects);
   }
 
-  percentage = 1; //Chance of change in comparison (<,<=,>=,>)
+  percentage = 10; //Chance of change in comparison (<,<=,>=,>)
   if (randInt(1, 10000) <= percentage * 100) {
     condition[1] = randInt(0, 3);
   }
 
-  percentage = 20; //Chance of slight change in distance
+  percentage = 25; //Chance of slight change in distance
   if (randInt(1, 10000) <= percentage * 100) {
     condition[2] += randInt(-15, 15);
-    condition[2] = Math.min(canv.width, Math.max(0, condition[2]));
+    condition[2] = Math.min(worldWidth, Math.max(0, condition[2]));
   }
 
   percentage = 1; //Chance of completely random distance
@@ -722,7 +735,7 @@ function newCommand(comm) {
   }
 
 
-  percentage = 1; //Chance of change in target
+  percentage = 5; //Chance of change in target
   if (randInt(1, 10000) <= percentage * 100) {
     action[1] = randVal(subjects);
   }
@@ -748,6 +761,8 @@ function randColor() {
 
 //Returns a random int between min and max, inclusive.
 function randInt(min, max) {
+  min = Math.round(min);
+  max = Math.round(max);
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
