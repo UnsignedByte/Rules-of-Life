@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 18:34:12, 26-Feb-2018
+ * @Last modified time: 18:48:50, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -18,6 +18,9 @@ var cells = new Array();
 var worldWidth;
 var worldHeight;
 var sizeRatio;
+
+var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
+var actions = ["reproduce", "combine", "avoid", "goto"];
 
 //Superclass for all elements on screen, contains a position
 class Element {
@@ -48,7 +51,7 @@ class Petri extends Element {
   //forces bigger unlucky passerby cells to break apart
   killCells() {
     for (var i = 0; i < cells.length; i++) {
-      if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size < cells[i].size) {
+      if (this.dist(cells[i]) <= Math.pow(cells[i].size / 2, 2) && this.size < cells[i].size) {
         while ( this.size < cells[i].size ){
           cells[i].reproduce();
         }
@@ -106,12 +109,6 @@ class Food extends Element {
 
 //Cell Class, contains all attributes for cell as well as how cell should move each frame.
 class Cell extends Element {
-  /**
-   * Variable Descriptions
-   * size is the size of the Cell
-   * (x,y) is the position of the Cell
-   * color is the cell trail color
-   */
   constructor(size, x, y, color, args, defComm) {
     super(size, x, y, color);
     this.args = args;
@@ -340,7 +337,7 @@ class Cell extends Element {
     if (anyPos) {
       var targ = all[this.defComm.action[1]];
       while (typeof targ == 'undefined') {
-        this.defComm.action[1] = randVal(['cRel', 'cHole', 'sSmall', 'sBig', 'cFood']);
+        this.defComm.action[1] = randVal(subjects);
         targ = all[this.defComm.action[1]];
       }
       var targDist = this.compDist(targ);
@@ -348,11 +345,15 @@ class Cell extends Element {
         if (targDist[0] > 0) {
           this.x -= 5 * (this.x - targDist[1]) / targDist[0];
           this.y -= 5 * (this.y - targDist[2]) / targDist[0];
+        } else {
+          this.defComm.action[1] = randVal(subjects);
         }
       } else if (this.defComm.action[0] == "avoid") {
         if (targDist[0] > 0) {
           this.x += 5 * (this.x - targDist[1]) / targDist[0];
           this.y += 5 * (this.y - targDist[2]) / targDist[0];
+        } else {
+          this.defComm.action[1] = randVal(subjects);
         }
       } else {
         this.defComm.action[0] = randVal(['goto', 'avoid']);
@@ -404,16 +405,16 @@ function init() {
     holes.push(new Hole(
       randInt(0, worldWidth),
       randInt(0, worldHeight),
-      randInt(10, 50)));
+      randInt(worldWidth/100, worldWidth/50)));
   }
   for (var i = 0; i < worldWidth/200; i++) {
     petris.push(new Petri(
-      randInt(50, 150),
+      randInt(worldWidth/60, worldWidth/20),
       randInt(0, worldWidth),
       randInt(0, worldHeight)));
   }
   for (var i = 0; i < worldWidth / 5; i++) {
-    cells.push(randomCell(randInt(1000, 2000) / 100));
+    cells.push(randomCell(randInt(worldWidth/2, worldWidth) / 100));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
   var numFood = worldWidth / 2;
@@ -694,8 +695,6 @@ function newCell(size, x, y, color, comms, defComm) {
 
 //Creates possibly mutated command
 function newCommand(comm) {
-  var actions = ["reproduce", "combine", "avoid", "goto"];
-  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
 
   var percentage = 1; //Chance of change in subject
   var condition = comm.condition;
@@ -737,8 +736,6 @@ function newCommand(comm) {
 
 //Creates a random command
 function randCommand() {
-  var actions = ["reproduce", "combine", "avoid", "goto"];
-  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
 
   var condition = [randVal(subjects), randInt(0, 3), randInt(0, 100)];
   var action = [randVal(actions), randVal(subjects)];
