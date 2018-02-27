@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 18:22:28, 26-Feb-2018
+ * @Last modified time: 18:24:06, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -105,17 +105,6 @@ class Hole extends Element {
 class Food extends Element {
   constructor(size, x, y, color) {
     super(size, x, y, color);
-  }
-
-  ageInc(i) {
-    this.age++;
-    if (this.age > 1000) {
-      feed[i] = new Food(
-        randInt(1, 10),
-        randInt(0, worldWidth),
-        randInt(0, worldHeight),
-        randColor());
-    }
   }
 }
 
@@ -451,7 +440,6 @@ function frame() {
     context.arc(feed[i].x * sizeRatio, feed[i].y * sizeRatio, feed[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
-    feed[i].ageInc(i);
     worldSize += Math.PI * Math.pow(feed[i].size / 2, 2);
   }
   context.globalAlpha = 0.5;
