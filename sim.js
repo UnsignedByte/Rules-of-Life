@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 17:50:25, 26-Feb-2018
+ * @Last modified time: 18:21:37, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -479,6 +479,37 @@ function frame() {
       worldSize += Math.PI * Math.pow(cells[currId].size / 2, 2);
     }
   }
+
+  context.lineWidth = 5;
+  var points = getPoints(oldest);
+
+  for ( var i = 0; i < points.length; i++ ){
+    context.beginPath();
+    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, oldest.size*sizeRatio / 2 + 2.5, 0, 2 * Math.PI, false);
+    context.strokeStyle = "#FFD700";
+    context.stroke();
+  }
+
+  points = getPoints(bigMama);
+
+  for ( var i = 0; i < points.length; i++ ){
+    context.beginPath();
+    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(bigMama.size*sizeRatio / 2 - 2.5, 0), 0, 2 * Math.PI, false);
+    context.strokeStyle = "#4286f4";
+    context.stroke();
+  }
+
+  points = getPoints(biggest);
+
+  context.lineWidth = 5;
+  for ( var i = 0; i < points.length; i++ ){
+    context.beginPath();
+    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(biggest.size*sizeRatio / 2, 0), 0, 2 * Math.PI, false);
+    context.strokeStyle = "#129115";
+    context.stroke();
+  }
+  context.lineWidth = 1;
+
   context.globalAlpha = 0.75;
   for (var i = 0; i < holes.length; i++) {
     context.beginPath();
@@ -521,37 +552,6 @@ function frame() {
       worldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
     }
   }
-
-
-  context.lineWidth = 5;
-  var points = getPoints(oldest);
-
-  for ( var i = 0; i < points.length; i++ ){
-    context.beginPath();
-    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, oldest.size*sizeRatio / 2 + 2.5, 0, 2 * Math.PI, false);
-    context.strokeStyle = "#FFD700";
-    context.stroke();
-  }
-
-  points = getPoints(bigMama);
-
-  for ( var i = 0; i < points.length; i++ ){
-    context.beginPath();
-    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(bigMama.size*sizeRatio / 2 - 2.5, 0), 0, 2 * Math.PI, false);
-    context.strokeStyle = "#4286f4";
-    context.stroke();
-  }
-
-  points = getPoints(biggest);
-
-  context.lineWidth = 5;
-  for ( var i = 0; i < points.length; i++ ){
-    context.beginPath();
-    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(biggest.size*sizeRatio / 2, 0), 0, 2 * Math.PI, false);
-    context.strokeStyle = "#129115";
-    context.stroke();
-  }
-  context.lineWidth = 1;
 
 
   displayCell(oldest, 0);
