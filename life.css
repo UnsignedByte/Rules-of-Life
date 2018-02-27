@@ -3,7 +3,7 @@
  * @Date:   16:41:55, 13-Feb-2018
  * @Filename: life.css
  * @Last modified by:   edl
- * @Last modified time: 09:34:28, 26-Feb-2018
+ * @Last modified time: 17:09:50, 26-Feb-2018
  */
 
 
@@ -45,6 +45,15 @@ td,input,button,p {
   border-style: solid;
   border-color: #302F2E;
   border-radius: 5px;
+}
+
+.cellDisp {
+	display:inline-block;
+	width:49.8%;
+}
+
+table {
+	width:100%;
 }
 
 table td + td {

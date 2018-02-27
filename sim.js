@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 10:31:15, 26-Feb-2018
+ * @Last modified time: 17:01:44, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -173,11 +173,16 @@ class Cell extends Element {
 
   //gets the closest bigger cell and smaller cell
   closestCells() {
-    var sBig, sSmall;
+    var sBig, sSmall, cRel;
     for (var i = 0; i < cells.length; i++) {
       if (cells[i].size < this.size) {
+        if ( typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
+          if (this.colDist(cells[i].color) <= 4096) {
+            cRel = i;
+          }
+        }
         if (typeof sSmall === 'undefined' || this.dist(cells[i]) < this.dist(cells[sSmall])) {
-          if (this.dist(cells[i]) <= this.size / 2) {
+          if (this.dist(cells[i]) <= this.size / 2 ) {
             if (this.colDist(cells[i].color) > 4096) {
               this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
               cells.splice(i, 1);
@@ -185,7 +190,7 @@ class Cell extends Element {
                 currId--;
               }
               i--;
-            } else if (this.combine && randInt(0, 500) == 0) {
+            } else if (this.combine && randInt(0, 100) == 0) {
               this.age = Math.max(cells[i].age, this.age);
               this.offspring += cells[i].offspring;
               this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
@@ -205,11 +210,18 @@ class Cell extends Element {
         if (typeof sBig === 'undefined' || this.dist(cells[i]) < this.dist(cells[sBig])) {
           if (this.colDist(cells[i].color) > 4096) {
             sBig = i;
+          } else {
+            cRel = i;
+          }
+        }
+        if ( typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
+          if (this.colDist(cells[i].color) <= 4096) {
+            cRel = i;
           }
         }
       }
     }
-    return [cells[sSmall], cells[sBig]];
+    return [cells[sSmall], cells[sBig], cells[cRel]];
   }
 
   //returns absolute distance between color values
@@ -247,25 +259,25 @@ class Cell extends Element {
     }
     switch (comm.condition[1]) {
       case 0:
-        if (this.dist(all[comm.condition[0]]) < comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 < comm.condition[2]) {
           return true;
         } else {
           return false;
         }
       case 1:
-        if (this.dist(all[comm.condition[0]]) <= comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 <= comm.condition[2]) {
           return true;
         } else {
           return false;
         }
       case 2:
-        if (this.dist(all[comm.condition[0]]) >= comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 >= comm.condition[2]) {
           return true;
         } else {
           return false;
         }
       case 3:
-        if (this.dist(all[comm.condition[0]]) > comm.condition[2]) {
+        if (this.dist(all[comm.condition[0]])-all[comm.condition[0]].size/2 > comm.condition[2]) {
           return true;
         } else {
           return false;
@@ -275,6 +287,7 @@ class Cell extends Element {
 
   //Creates a new cell with possibility of mutation
   reproduce() {
+    this.offspring++;
     var fraction = randInt(100, 500) / 1000; //Amount used to form child
     cells.push(newCell(this.size * Math.sqrt(fraction), this.x, this.y, this.color, this.args, this.defComm));
     this.size *= Math.sqrt(1 - fraction);
@@ -282,9 +295,8 @@ class Cell extends Element {
 
   //Cell moves according to its given rules.
   move() {
-    if (randInt(Math.min(this.size, 500), 500) >= 490 && this.size > 50) {
+    if ( this.size > 200 ){
       this.reproduce();
-      this.offspring++;
     }
     var closest = this.closestCells();
     var all = {};
@@ -292,6 +304,7 @@ class Cell extends Element {
     all["cHole"] = this.closestHole();
     all["sSmall"] = closest[0];
     all["sBig"] = closest[1];
+    all["cRel"] = closest[2];
     all["cFood"] = this.closestFood();
     var anyPos = true;
     this.combine = false;
@@ -306,27 +319,31 @@ class Cell extends Element {
               anyPos = false;
               this.x -= 5 * (this.x - targDist[1]) / targDist[0];
               this.y -= 5 * (this.y - targDist[2]) / targDist[0];
+              break;
             }
           } else if (comm.action[0] == "avoid") {
             if (targDist[0] > 0) {
               anyPos = false;
               this.x += 5 * (this.x - targDist[1]) / targDist[0];
               this.y += 5 * (this.y - targDist[2]) / targDist[0];
+              break;
             }
           } else if (comm.action[0] == "combine") {
             this.combine = true;
-          }
-          if (isNaN(this.x) || isNaN(this.y)) {
-            console.log(this, targ, targDist[0]);
+            break;
+          } else if (comm.action[0] == "reproduce") {
+            if ( this.size > 100 ){
+              this.reproduce();
+              break;
+            }
           }
         }
-        break;
       }
     }
     if (anyPos) {
       var targ = all[this.defComm.action[1]];
       while (typeof targ == 'undefined') {
-        this.defComm.action[1] = randVal(['cHole', 'sSmall', 'sBig', 'cFood']);
+        this.defComm.action[1] = randVal(['cRel', 'cHole', 'sSmall', 'sBig', 'cFood']);
         targ = all[this.defComm.action[1]];
       }
       var targDist = this.compDist(targ);
@@ -340,12 +357,8 @@ class Cell extends Element {
           this.x += 5 * (this.x - targDist[1]) / targDist[0];
           this.y += 5 * (this.y - targDist[2]) / targDist[0];
         }
-      } else if (this.defComm.action[0] == "combine") {
-        this.combine = true;
+      } else {
         this.defComm.action[0] = randVal(['goto', 'avoid']);
-      }
-      if (isNaN(this.x) || isNaN(this.y)) {
-        console.log(this, targ, targDist[0]);
       }
     }
     var millionthLost = 0.5;
@@ -421,6 +434,7 @@ function init() {
 function frame() {
   var oldest = cells[0];
   var bigMama = cells[0];
+  var biggest = cells[0];
   var worldSize = 0;
   context.clearRect(0, 0, canv.width, canv.height);
   for (var i = 0; i < feed.length; i++) {
@@ -443,15 +457,12 @@ function frame() {
       if (bigMama.offspring < cells[currId].offspring) {
         bigMama = cells[currId];
       }
+      if (biggest.size < cells[currId].size) {
+        biggest = cells[currId];
+      }
       context.fillStyle = cells[currId].color;
       context.strokeStyle = cells[currId].color;
-      var points = [
-        [cells[currId].x, cells[currId].y],
-        [cells[currId].x + canv.width, cells[currId].y],
-        [cells[currId].x - canv.width, cells[currId].y],
-        [cells[currId].x, cells[currId].y + canv.height],
-        [cells[currId].x, cells[currId].y - canv.height]
-      ]
+      var points = getPoints(cells[currId]);
       for (var j = 0; j < points.length; j++) {
         context.beginPath();
         context.arc(points[j][0], points[j][1], cells[currId].size / 2, 0, 2 * Math.PI, false);
@@ -471,19 +482,22 @@ function frame() {
     context.fill();
     holes[i].move();
   }
+  context.lineWidth = 5;
   for (var i = 0; i < petris.length; i++) {
-    context.beginPath();
+    var points = getPoints(petris[i]);
     context.fillStyle = petris[i].color;
-    context.lineWidth = 5;
     context.strokeStyle = petris[i].color;
-    context.arc(petris[i].x, petris[i].y, petris[i].size / 2, 0, 2 * Math.PI, false);
-    context.globalAlpha = 0.5;
-    context.stroke();
-    context.globalAlpha = 0.25;
-    context.fill();
-    context.lineWidth = 1;
+    for (var j = 0; j < points.length; j++) {
+      context.beginPath();
+      context.arc(points[j][0], points[j][1], petris[i].size / 2, 0, 2 * Math.PI, false);
+      context.globalAlpha = 0.5;
+      context.stroke();
+      context.globalAlpha = 0.25;
+      context.fill();
+    }
     petris[i].killCells();
   }
+  context.lineWidth = 1;
   context.globalAlpha = 1;
   while (worldSize < minWorldSize) {
     feed.push(new Food(
@@ -496,25 +510,46 @@ function frame() {
 
     var percentage = 1; //Chance of random cell appearing
     if (randInt(1, 10000) <= percentage * 100) {
-      cells.push( randomCell( randInt( 25, 50 ) ) );
+      cells.push( randomCell( randInt(1000, 2000) / 100 ) );
       worldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
     }
   }
 
-  context.beginPath();
-  context.arc(oldest.x, oldest.y, oldest.size / 2 + 2.5, 0, 2 * Math.PI, false);
-  context.strokeStyle = "#FFD700";
-  context.lineWidth = 5;
-  context.stroke();
 
-  context.beginPath();
-  context.arc(bigMama.x, bigMama.y, Math.max(bigMama.size / 2 - 2.5, 0), 0, 2 * Math.PI, false);
-  context.strokeStyle = "#4286f4";
-  context.stroke();
+  context.lineWidth = 5;
+  var points = getPoints(oldest);
+
+  for ( var i = 0; i < points.length; i++ ){
+    context.beginPath();
+    context.arc(points[i][0], points[i][1], oldest.size / 2 + 2.5, 0, 2 * Math.PI, false);
+    context.strokeStyle = "#FFD700";
+    context.stroke();
+  }
+
+  points = getPoints(bigMama);
+
+  for ( var i = 0; i < points.length; i++ ){
+    context.beginPath();
+    context.arc(points[i][0], points[i][1], Math.max(bigMama.size / 2 - 2.5, 0), 0, 2 * Math.PI, false);
+    context.strokeStyle = "#4286f4";
+    context.stroke();
+  }
+
+  points = getPoints(biggest);
+
+  context.lineWidth = 5;
+  for ( var i = 0; i < points.length; i++ ){
+    context.beginPath();
+    context.arc(points[i][0], points[i][1], Math.max(biggest.size / 2, 0), 0, 2 * Math.PI, false);
+    context.strokeStyle = "#129115";
+    context.stroke();
+  }
   context.lineWidth = 1;
+
 
   displayCell(oldest, 0);
   displayCell(bigMama, 1);
+  displayCell(biggest, 2);
 
   window.requestAnimationFrame(frame);
 }
@@ -522,9 +557,29 @@ function frame() {
 function displayCell(cell, id) {
   document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
   document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
+  document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
   document.getElementById('position' + id).innerHTML = "Position: (" + Math.round(cell.x) + "," + Math.round(cell.y) + ")";
+  if (cell.defComm.action[0] == 'combine') {
+    document.getElementById('defComm' + id).innerHTML  = 'combine with nearby relatives';
+  }else if (cell.defComm.action[0] == 'reproduce') {
+    document.getElementById('defComm' + id).innerHTML = 'reproduce';
+  } else {
+    document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
+  }
 
   updateConds(cell, id);
+}
+
+
+//return list of points used for rendering
+function getPoints (obj){
+  return [
+    [obj.x, obj.y],
+  [obj.x + canv.width, obj.y],
+  [obj.x - canv.width, obj.y],
+  [obj.x, obj.y + canv.height],
+  [obj.x, obj.y - canv.height]
+];
 }
 
 //Creates a random cell with random attributes
@@ -534,7 +589,7 @@ function randomCell(size) {
     randInt(0, canv.width), //x
     randInt(0, canv.height), //y
     randColor(), //color
-    randCommands(10), //args
+    randCommands(randInt(1, 9)), //args
     randCommand()
   );
 }
@@ -558,6 +613,8 @@ function updateConds(cell, id) {
     var actNew = document.createElement('td');
     if (cell.args[i].action[0] == 'combine') {
       actNew.innerHTML = 'combine with nearby relatives';
+    }else if (cell.args[i].action[0] == 'reproduce') {
+      actNew.innerHTML = 'reproduce';
     } else {
       actNew.innerHTML = cell.args[i].action[0] + " the nearest " + mapComm(cell.args[i].action[1], "subj");
     }
@@ -572,7 +629,8 @@ function mapComm(str, type) {
       "sBig": "big cell",
       "cHole": "wormhole",
       "cFood": "food",
-      "cPetri": "anti-biotic plate"
+      "cPetri": "anti-biotic plate",
+      "cRel": "relative"
     },
     "conds": {
       0: "<",
@@ -631,8 +689,8 @@ function newCell(size, x, y, color, comms, defComm) {
 
 //Creates possibly mutated command
 function newCommand(comm) {
-  var actions = ["combine", "avoid", "goto"];
-  var subjects = ["sBig", "sSmall", "cFood", "cHole", "cPetri"];
+  var actions = ["reproduce", "combine", "avoid", "goto"];
+  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "cPetri"];
 
   var percentage = 1; //Chance of change in subject
   var condition = comm.condition;
@@ -669,14 +727,13 @@ function newCommand(comm) {
     action[1] = randVal(subjects);
   }
 
-
   return new Command(condition, action);
 }
 
 //Creates a random command
 function randCommand() {
-  var actions = ["combine", "avoid", "goto"];
-  var subjects = ["sBig", "sSmall", "cFood", "cHole", "cPetri"];
+  var actions = ["reproduce", "combine", "avoid", "goto"];
+  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "cPetri"];
 
   var condition = [randVal(subjects), randInt(0, 3), randInt(0, 100)];
   var action = [randVal(actions), randVal(subjects)];

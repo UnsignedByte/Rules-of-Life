@@ -9,30 +9,54 @@
     <canvas id="world"></canvas>
   </div>
   <div class="content">
-    <p> Oldest Cell: </p>
-    <table cellspacing="0" id="attribs0">
-      <tr>
-        <td id = "age0">Age:</td>
-        <td id = "size0">Size:</td>
-        <td id = "position0">Position:</td>
-      </tr>
-    </table>
-    <table class="comm" cellspacing="0" id="comms1">
-      <tr id="cond0"></tr>
-      <tr id="action0"></tr>
-    </table>
-    <p> Cell with most offspring: </p>
-    <table cellspacing="0" id="attribs1">
-      <tr>
-        <td id = "age1">Age:</td>
-        <td id = "size1">Size:</td>
-        <td id = "position1">Position:</td>
-      </tr>
-    </table>
-    <table class="comm" cellspacing="0" id="comms1">
-      <tr id="cond1"></tr>
-      <tr id="action1"></tr>
-    </table>
+    <div class="cellDisp">
+      <p> Oldest Cell: </p>
+      <table cellspacing="0" id="attribs0">
+        <tr>
+          <td id = "age0">Age:</td>
+          <td id = "size0">Size:</td>
+          <td id = "kid0">Offspring:</td>
+          <td id = "position0">Position:</td>
+          <td id = "defComm0">Position:</td>
+        </tr>
+      </table>
+      <table class="comm" cellspacing="0" id="comms1">
+        <tr id="cond0"></tr>
+        <tr id="action0"></tr>
+      </table>
+    </div>
+    <div class="cellDisp">
+      <p> Cell with most offspring: </p>
+      <table cellspacing="0" id="attribs1">
+        <tr>
+          <td id = "age1">Age:</td>
+          <td id = "size1">Size:</td>
+          <td id = "kid1">Offspring:</td>
+          <td id = "position1">Position:</td>
+          <td id = "defComm1">Default Action:</td>
+        </tr>
+      </table>
+      <table class="comm" cellspacing="0" id="comms1">
+        <tr id="cond1"></tr>
+        <tr id="action1"></tr>
+      </table>
+    </div>
+    <div class="cellDisp">
+      <p> Biggest Cell: </p>
+      <table cellspacing="0" id="attribs2">
+        <tr>
+          <td id = "age2">Age:</td>
+          <td id = "size2">Size:</td>
+          <td id = "kid2">Offspring:</td>
+          <td id = "position2">Position:</td>
+          <td id = "defComm2">Default Action:</td>
+        </tr>
+      </table>
+      <table class="comm" cellspacing="0" id="comms2">
+        <tr id="cond2"></tr>
+        <tr id="action2"></tr>
+      </table>
+    </div>
   </div>
   <script src="sim.js"></script>
 </body>
