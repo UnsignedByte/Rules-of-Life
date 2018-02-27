@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 20:49:56, 26-Feb-2018
+ * @Last modified time: 21:58:21, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -51,8 +51,8 @@ class Petri extends Element {
   //forces bigger unlucky passerby cells to break apart
   killCells() {
     for (var i = 0; i < cells.length; i++) {
-      if (this.dist(cells[i]) <= Math.pow(cells[i].size / 2, 2) && this.size < cells[i].size) {
-        while ( this.size < cells[i].size ){
+      if (this.dist(cells[i]) <= Math.pow(cells[i].size / 2 + this.size / 2, 2) && this.size < cells[i].size) {
+        while (this.size < cells[i].size) {
           cells[i].reproduce();
         }
       }
@@ -87,14 +87,8 @@ class Hole extends Element {
     this.direction += randInt(-30, 30);
     this.x += 5 * Math.cos(this.direction / 180 * Math.PI);
     this.y += 5 * Math.sin(this.direction / 180 * Math.PI);
-    this.age++;
-    if (this.age >= randInt(50000, 100000)) {
-      this.x = randInt(0, worldWidth);
-      this.y = randInt(0, worldHeight);
-      this.size = randInt(25, 50);
-      this.direction = randInt(1, 360);
-      this.age = 0;
-    }
+    this.x = ((this.x % worldWidth) + worldWidth) % worldWidth;
+    this.y = ((this.y % worldHeight) + worldHeight) % worldHeight;
   }
 }
 
@@ -140,11 +134,11 @@ class Cell extends Element {
   closestPetri() {
     var sPetri, bPetri;
     for (var i = 1; i < petris.length; i++) {
-      if ( this.size < petris[i].size ){
+      if (this.size < petris[i].size) {
         if (typeof bPetri == 'undefined' || this.dist(petris[i]) < this.dist(bPetri)) {
           bPetri = petris[i];
         }
-      }else if ( this.size < petris[i].size ){
+      } else if (this.size < petris[i].size) {
         if (typeof sPetri == 'undefined' || this.dist(petris[i]) < this.dist(sPetri)) {
           sPetri = petris[i];
         }
@@ -182,14 +176,31 @@ class Cell extends Element {
               if (i < currId) {
                 currId--;
               }
+              if (i < targCell) {
+                targCell--;
+              }else if ( i == targCell ){
+                targCell = currId;
+              }
               i--;
-            } else if (this.combine && randInt(0, 100) == 0) {
+            } else if (this.combine) {
               this.age = Math.max(cells[i].age, this.age);
               this.offspring += cells[i].offspring;
               this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
+              for ( var j = 0; j < randVal([this.args.length, cells[i].args.length]); j++ ){
+                if ( this.args.length <= j ){
+                  this.args.push(cells[i].args[j]);
+                }else if ( cells[i].args.length > j ){
+                  this.args[j] = randVal([this.args[j], cells[i].args[j]]);
+                }
+              }
               cells.splice(i, 1);
               if (i < currId) {
                 currId--;
+              }
+              if (i < targCell) {
+                targCell--;
+              }else if ( i == targCell ){
+                targCell = currId;
               }
               i--;
             }
@@ -239,9 +250,6 @@ class Cell extends Element {
       }
     }
     var reto = Math.sqrt(Math.pow(this.x - points[minId][0], 2) + Math.pow(this.y - points[minId][1], 2));
-    if (isNaN(reto)) {
-      console.log(this.x, points[minId][0], this.y, points[minId][1])
-    }
     return [reto, points[minId][0], points[minId][1]];
   }
 
@@ -252,25 +260,25 @@ class Cell extends Element {
     }
     switch (comm.condition[1]) {
       case 0:
-        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size / 2, 2)) {
           return true;
         } else {
           return false;
         }
       case 1:
-        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size / 2, 2)) {
           return true;
         } else {
           return false;
         }
       case 2:
-        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size / 2, 2)) {
           return true;
         } else {
           return false;
         }
       case 3:
-        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size / 2, 2)) {
           return true;
         } else {
           return false;
@@ -396,28 +404,32 @@ class Command {
 
 var currId = 0;
 var minWorldSize = 0;
+var targCell;
+var clickHappened = false;
+var mousePos;
 
 init();
 
 function init() {
+  clickHappened = false;
   canv.width = window.innerWidth;
   canv.height = 0.75 * window.innerHeight;
   setWorld(3000);
 
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < worldWidth / 600; i++) {
     holes.push(new Hole(
       randInt(0, worldWidth),
       randInt(0, worldHeight),
-      randInt(worldWidth/100, worldWidth/50)));
+      randInt(worldWidth / 100, worldWidth / 50)));
   }
-  for (var i = 0; i < worldWidth/200; i++) {
+  for (var i = 0; i < worldWidth / 200; i++) {
     petris.push(new Petri(
-      randInt(worldWidth/60, worldWidth/20),
+      randInt(worldWidth / 60, worldWidth / 20),
       randInt(0, worldWidth),
       randInt(0, worldHeight)));
   }
   for (var i = 0; i < worldWidth / 5; i++) {
-    cells.push(randomCell(randInt(worldWidth/2, worldWidth) / 100));
+    cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 100));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
   var numFood = worldWidth / 2;
@@ -430,12 +442,13 @@ function init() {
     ));
     minWorldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
   }
+  targCell = 0;
   window.requestAnimationFrame(frame);
 }
 
 //Updates each frame
 function frame() {
-  for ( var id = 0; id < 3; id++ ){
+  for (var id = 0; id < 4; id++) {
     document.getElementById('defComm' + id).classList.remove("yellow");
   }
   var oldest = cells[0];
@@ -499,11 +512,19 @@ function frame() {
 
   points = getPoints(biggest);
 
-  context.lineWidth = 5;
   for (var i = 0; i < points.length; i++) {
     context.beginPath();
     context.arc(points[i][0] * sizeRatio, points[i][1] * sizeRatio, Math.max(biggest.size * sizeRatio / 2, 0), 0, 2 * Math.PI, false);
     context.strokeStyle = "#129115";
+    context.stroke();
+  }
+
+  points = getPoints(cells[targCell]);
+
+  for (var i = 0; i < points.length; i++) {
+    context.beginPath();
+    context.arc(points[i][0] * sizeRatio, points[i][1] * sizeRatio, Math.max(cells[targCell].size * sizeRatio / 2 + 5, 0), 0, 2 * Math.PI, false);
+    context.strokeStyle = "#DC143C";
     context.stroke();
   }
   context.lineWidth = 1;
@@ -555,6 +576,16 @@ function frame() {
   displayCell(oldest, 0);
   displayCell(bigMama, 1);
   displayCell(biggest, 2);
+  displayCell(cells[targCell], 3);
+
+  if (clickHappened){
+    targCell = 0;
+    for ( var i = 1; i < cells.length; i++ ){
+      if ( Math.pow(mousePos.x-cells[i].x, 2)+Math.pow(mousePos.y-cells[i].y, 2) < Math.pow(mousePos.x-cells[targCell].x, 2)+Math.pow(mousePos.y-cells[targCell].y, 2) ) {
+        targCell = i;
+      }
+    }
+  }
 
   window.requestAnimationFrame(frame);
 }
@@ -571,7 +602,7 @@ function displayCell(cell, id) {
   } else {
     document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
   }
-  if ( cell.currAct == -1 ){
+  if (cell.currAct == -1) {
     document.getElementById('defComm' + id).setAttribute("class", "yellow");
   }
 
@@ -631,7 +662,7 @@ function updateConds(cell, id) {
     } else {
       actNew.innerHTML = cell.args[i].action[0] + " the nearest " + mapComm(cell.args[i].action[1], "subj");
     }
-    if ( cell.currAct == i ){
+    if (cell.currAct == i) {
       condNew.setAttribute("class", "yellow");
       actNew.setAttribute("class", "yellow");
     }
@@ -772,3 +803,18 @@ function randInt(min, max) {
 function randVal(a) {
   return a[randInt(0, a.length - 1)];
 }
+
+function getMousePos(evt) {
+  var rect = canv.getBoundingClientRect();
+  return {
+    x: evt.clientX - rect.left,
+    y: evt.clientY - rect.top
+  };
+}
+
+canv.addEventListener('click', function(evt) {
+  mousePos = getMousePos(evt);
+  mousePos.x /= sizeRatio;
+  mousePos.y /= sizeRatio;
+  clickHappened = true;
+}, false);
