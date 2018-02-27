@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 21:58:21, 26-Feb-2018
+ * @Last modified time: 06:27:33, 27-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -581,10 +581,11 @@ function frame() {
   if (clickHappened){
     targCell = 0;
     for ( var i = 1; i < cells.length; i++ ){
-      if ( Math.pow(mousePos.x-cells[i].x, 2)+Math.pow(mousePos.y-cells[i].y, 2) < Math.pow(mousePos.x-cells[targCell].x, 2)+Math.pow(mousePos.y-cells[targCell].y, 2) ) {
+      if ( cells[i].dist(mousePos) < cells[targCell].dist(mousePos) ) {
         targCell = i;
       }
     }
+    clickHappened = false;
   }
 
   window.requestAnimationFrame(frame);
@@ -594,7 +595,7 @@ function displayCell(cell, id) {
   document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
   document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
   document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
-  document.getElementById('position' + id).innerHTML = "Position: (" + Math.round(cell.x) + "," + Math.round(cell.y) + ")";
+  document.getElementById('color' + id).innerHTML = "Color: " + cell.color;
   if (cell.defComm.action[0] == 'combine') {
     document.getElementById('defComm' + id).innerHTML = 'combine with nearby relatives';
   } else if (cell.defComm.action[0] == 'reproduce') {
