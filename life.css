@@ -3,7 +3,7 @@
  * @Date:   16:41:55, 13-Feb-2018
  * @Filename: life.css
  * @Last modified by:   edl
- * @Last modified time: 17:09:50, 26-Feb-2018
+ * @Last modified time: 20:42:10, 26-Feb-2018
  */
 
 
@@ -32,6 +32,10 @@ button {
 
 .comm td {
 	font-size: 10px;
+}
+
+.yellow {
+	color: #FFDF3F;
 }
 
 td,input,button,p {

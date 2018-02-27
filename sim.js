@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 18:48:50, 26-Feb-2018
+ * @Last modified time: 20:49:56, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -116,6 +116,7 @@ class Cell extends Element {
     this.combine = false;
     this.defComm = defComm;
     this.coolDown = 0;
+    this.currAct = 0;
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -251,25 +252,25 @@ class Cell extends Element {
     }
     switch (comm.condition[1]) {
       case 0:
-        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
+        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
           return true;
         } else {
           return false;
         }
       case 1:
-        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
+        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
           return true;
         } else {
           return false;
         }
       case 2:
-        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
+        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
           return true;
         } else {
           return false;
         }
       case 3:
-        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
+        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2 + this.size/2, 2)) {
           return true;
         } else {
           return false;
@@ -308,6 +309,7 @@ class Cell extends Element {
         var targ = all[comm.action[1]];
         if (typeof targ !== 'undefined') {
           var targDist = this.compDist(targ);
+          this.currAct = i;
           if (comm.action[0] == "goto") {
             if (targDist[0] > 0) {
               anyPos = false;
@@ -335,6 +337,7 @@ class Cell extends Element {
       }
     }
     if (anyPos) {
+      this.currAct = -1;
       var targ = all[this.defComm.action[1]];
       while (typeof targ == 'undefined') {
         this.defComm.action[1] = randVal(subjects);
@@ -432,6 +435,9 @@ function init() {
 
 //Updates each frame
 function frame() {
+  for ( var id = 0; id < 3; id++ ){
+    document.getElementById('defComm' + id).classList.remove("yellow");
+  }
   var oldest = cells[0];
   var bigMama = cells[0];
   var biggest = cells[0];
@@ -565,6 +571,9 @@ function displayCell(cell, id) {
   } else {
     document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
   }
+  if ( cell.currAct == -1 ){
+    document.getElementById('defComm' + id).setAttribute("class", "yellow");
+  }
 
   updateConds(cell, id);
 }
@@ -614,7 +623,6 @@ function updateConds(cell, id) {
   for (var i = 0; i < cell.args.length; i++) {
     var condNew = document.createElement('td');
     condNew.innerHTML = "if distance to nearest <br>" + mapComm(cell.args[i].condition[0], "subj") + " " + mapComm(cell.args[i].condition[1], "conds") + " " + cell.args[i].condition[2] + " px";
-    condRow.appendChild(condNew);
     var actNew = document.createElement('td');
     if (cell.args[i].action[0] == 'combine') {
       actNew.innerHTML = 'combine with nearby relatives';
@@ -623,6 +631,11 @@ function updateConds(cell, id) {
     } else {
       actNew.innerHTML = cell.args[i].action[0] + " the nearest " + mapComm(cell.args[i].action[1], "subj");
     }
+    if ( cell.currAct == i ){
+      condNew.setAttribute("class", "yellow");
+      actNew.setAttribute("class", "yellow");
+    }
+    condRow.appendChild(condNew);
     actRow.appendChild(actNew);
   }
 }
