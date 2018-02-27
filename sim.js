@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 08:28:07, 27-Feb-2018
+ * @Last modified time: 12:00:54, 27-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -20,7 +20,7 @@ var worldWidth;
 var worldHeight;
 var sizeRatio;
 
-var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
+var subjects = ["sSpawner", "bSpawner", "cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
 var actions = ["reproduce", "combine", "avoid", "goto"];
 
 //Superclass for all elements on screen, contains a position
@@ -45,6 +45,27 @@ class Element {
 class Spawner extends Element {
   constructor(size, x, y) {
     super(size, x, y, '#DC143C');
+  }
+
+  eatCells(){
+    for (var i = 0; i < cells.length; i++) {
+      if (this.dist(cells[i]) <= Math.pow(cells[i].size / 2 + this.size / 2, 2) && this.size > cells[i].size) {
+        if (i < currId) {
+          currId--;
+        }
+        if (i < targCell) {
+          targCell--;
+        }else if ( i == targCell ){
+          mousePos = {
+            x:cells[i].x,
+            y:cells[i].y
+          }
+          clickHappened = true;
+        }
+        cells.splice(i, 1);
+        i--;
+      }
+    }
   }
 }
 
@@ -127,7 +148,7 @@ class Cell extends Element {
     var eatable = new Array();
     var cFood = 0;
     for (var i = 0; i < feed.length; i++) {
-      if ( feed[i].color != this.color ){
+      if ( this.colDist(feed[i].color) > 4096 ){
         //Eats food that can be eaten and finds closest non-eatable food.
         if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
           this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(feed[i].size / 2, 2));
@@ -141,15 +162,34 @@ class Cell extends Element {
     return feed[cFood];
   }
 
+  //gets the closest spawner
+  closestSpawner() {
+    var sSpawner;
+    var bSpawner;
+    for (var i = 0; i < spawners.length; i++) {
+      if (this.size < spawners[i].size) {
+        if (typeof bSpawner == 'undefined' || this.dist(spawners[i]) < this.dist(bSpawner)) {
+          bSpawner = spawners[i];
+        }
+      } else {
+        if (typeof sSpawner == 'undefined' || this.dist(spawners[i]) < this.dist(sSpawner)) {
+          sSpawner = spawners[i];
+        }
+      }
+    }
+    return [sSpawner, bSpawner];
+  }
+
+
   //gets the closest plate
   closestPetri() {
     var sPetri, bPetri;
-    for (var i = 1; i < petris.length; i++) {
+    for (var i = 0; i < petris.length; i++) {
       if (this.size < petris[i].size) {
         if (typeof bPetri == 'undefined' || this.dist(petris[i]) < this.dist(bPetri)) {
           bPetri = petris[i];
         }
-      } else if (this.size < petris[i].size) {
+      } else {
         if (typeof sPetri == 'undefined' || this.dist(petris[i]) < this.dist(sPetri)) {
           sPetri = petris[i];
         }
@@ -311,7 +351,11 @@ class Cell extends Element {
     }
     var closest = this.closestCells();
     var pets = this.closestPetri();
+    var spawns = this.closestSpawner();
     var all = {};
+
+    all["sSpawner"] = spawns[0];
+    all["bSpawner"] = spawns[1];
     all["sPetri"] = pets[0];
     all["bPetri"] = pets[1];
     all["cHole"] = this.closestHole();
@@ -380,14 +424,16 @@ class Cell extends Element {
         this.defComm.action[0] = randVal(['goto', 'avoid']);
       }
     }
-    var percentageLoss = 0.01;
-    var amountLoss = percentageLoss/100 * Math.pow(this.size, 2);
-    this.size = Math.sqrt(Math.pow(this.size, 2)-percentageLoss);
-    var fSize = Math.sqrt(amountLoss);
-    if (fSize > 1){
-      var rDeg = randInt(1, 360);
-      var rDist = Math.pow(randInt(0, Math.sqrt(this.size)*1000)/1000, 2);
-      feed.push(new Food ( amountLoss, this.x+rDist*Math.cos(rDeg), this.y+rDist*Math.sin(rDeg), this.color ));
+    if (this.age % 10 == 0){
+      var percentageLoss = 0.5;
+      var amountLoss = percentageLoss/100 * Math.pow(this.size, 2);
+      this.size = Math.sqrt(Math.pow(this.size, 2)-percentageLoss);
+      var fSize = Math.sqrt(amountLoss);
+      if (fSize > 5){
+        var rDeg = randInt(1, 360);
+        var rDist = Math.pow(randInt(0, Math.sqrt(this.size)*1000)/2000, 2);
+        feed.push(new Food ( fSize, this.x+rDist*Math.cos(rDeg), this.y+rDist*Math.sin(rDeg), this.color ));
+      }
     }
 
     this.x = ((this.x % worldWidth) + worldWidth) % worldWidth;
@@ -454,7 +500,7 @@ function init() {
     cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 100));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
-  var numFood = worldWidth / 2;
+  var numFood = worldWidth / 8;
   for (var i = 0; i < numFood; i++) {
     randFood(randInt(0, spawners.length-1));
     minWorldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
@@ -586,6 +632,7 @@ function frame() {
       context.globalAlpha = 0.25;
       context.fill();
     }
+    spawners[i].eatCells();
   }
   context.lineWidth = 1;
   context.globalAlpha = 1;
@@ -718,7 +765,9 @@ function mapComm(str, type) {
       "cFood": "food",
       "sPetri": "small hiding spot",
       "bPetri": "big hiding spot",
-      "cRel": "relative"
+      "cRel": "relative",
+      "sSpawner": "small spawner",
+      "bSpawner": "big spawner"
     },
     "conds": {
       0: "<",
