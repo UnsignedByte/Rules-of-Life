@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 18:24:06, 26-Feb-2018
+ * @Last modified time: 18:34:12, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -45,18 +45,13 @@ class Petri extends Element {
     super(size, x, y, '#DC143C');
   }
 
-  //kills smaller unlucky passerby cells and feed
+  //forces bigger unlucky passerby cells to break apart
   killCells() {
     for (var i = 0; i < cells.length; i++) {
-      if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size > cells[i].size) {
-        cells.splice(i, 1);
-        i--;
-      }
-    }
-    for (var i = 0; i < feed.length; i++) {
-      if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
-        feed.splice(i, 1);
-        i--;
+      if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size < cells[i].size) {
+        while ( this.size < cells[i].size ){
+          cells[i].reproduce();
+        }
       }
     }
   }
@@ -145,13 +140,19 @@ class Cell extends Element {
 
   //gets the closest plate
   closestPetri() {
-    var cPetri = petris[0];
+    var sPetri, bPetri;
     for (var i = 1; i < petris.length; i++) {
-      if (this.dist(petris[i]) < this.dist(cPetri)) {
-        cPetri = petris[i];
+      if ( this.size < petris[i].size ){
+        if (typeof bPetri == 'undefined' || this.dist(petris[i]) < this.dist(bPetri)) {
+          bPetri = petris[i];
+        }
+      }else if ( this.size < petris[i].size ){
+        if (typeof sPetri == 'undefined' || this.dist(petris[i]) < this.dist(sPetri)) {
+          sPetri = petris[i];
+        }
       }
     }
-    return cPetri
+    return [sPetri, bPetri];
   }
 
   //gets the closest hole
@@ -293,8 +294,10 @@ class Cell extends Element {
       this.reproduce();
     }
     var closest = this.closestCells();
+    var pets = this.closestPetri();
     var all = {};
-    all["cPetri"] = this.closestPetri();
+    all["sPetri"] = pets[0];
+    all["bPetri"] = pets[1];
     all["cHole"] = this.closestHole();
     all["sSmall"] = closest[0];
     all["sBig"] = closest[1];
@@ -403,9 +406,9 @@ function init() {
       randInt(0, worldHeight),
       randInt(10, 50)));
   }
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < worldWidth/200; i++) {
     petris.push(new Petri(
-      randInt(100, 150),
+      randInt(50, 150),
       randInt(0, worldWidth),
       randInt(0, worldHeight)));
   }
@@ -630,7 +633,8 @@ function mapComm(str, type) {
       "sBig": "big cell",
       "cHole": "wormhole",
       "cFood": "food",
-      "cPetri": "anti-biotic plate",
+      "sPetri": "small hiding spot",
+      "bPetri": "big hiding spot",
       "cRel": "relative"
     },
     "conds": {
@@ -691,7 +695,7 @@ function newCell(size, x, y, color, comms, defComm) {
 //Creates possibly mutated command
 function newCommand(comm) {
   var actions = ["reproduce", "combine", "avoid", "goto"];
-  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "cPetri"];
+  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
 
   var percentage = 1; //Chance of change in subject
   var condition = comm.condition;
@@ -734,7 +738,7 @@ function newCommand(comm) {
 //Creates a random command
 function randCommand() {
   var actions = ["reproduce", "combine", "avoid", "goto"];
-  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "cPetri"];
+  var subjects = ["cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
 
   var condition = [randVal(subjects), randInt(0, 3), randInt(0, 100)];
   var action = [randVal(actions), randVal(subjects)];
