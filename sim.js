@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 06:27:33, 27-Feb-2018
+ * @Last modified time: 08:28:07, 27-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -13,6 +13,7 @@ var petris = new Array();
 var holes = new Array();
 var feed = new Array();
 var cells = new Array();
+var spawners = new Array();
 
 //Virtual canvas
 var worldWidth;
@@ -40,12 +41,19 @@ class Element {
   }
 }
 
+//Spawner creates food around it
+class Spawner extends Element {
+  constructor(size, x, y) {
+    super(size, x, y, '#DC143C');
+  }
+}
+
 
 //Petri dish kills cells near it
 
 class Petri extends Element {
   constructor(size, x, y) {
-    super(size, x, y, '#DC143C');
+    super(size, x, y, '#36F72C');
   }
 
   //forces bigger unlucky passerby cells to break apart
@@ -103,7 +111,7 @@ class Food extends Element {
 
 //Cell Class, contains all attributes for cell as well as how cell should move each frame.
 class Cell extends Element {
-  constructor(size, x, y, color, args, defComm) {
+  constructor(size, x, y, color, fraction, args, defComm) {
     super(size, x, y, color);
     this.args = args;
     this.offspring = 0;
@@ -111,6 +119,7 @@ class Cell extends Element {
     this.defComm = defComm;
     this.coolDown = 0;
     this.currAct = 0;
+    this.fraction = fraction;
   }
 
   //gets the closest food and eats food that is within it's grasp
@@ -118,13 +127,15 @@ class Cell extends Element {
     var eatable = new Array();
     var cFood = 0;
     for (var i = 0; i < feed.length; i++) {
-      //Eats food that can be eaten and finds closest non-eatable food.
-      if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
-        this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(feed[i].size / 2, 2));
-        feed.splice(i, 1);
-        i--;
-      } else if (this.dist(feed[i]) < this.dist(feed[cFood])) {
-        cFood = i;
+      if ( feed[i].color != this.color ){
+        //Eats food that can be eaten and finds closest non-eatable food.
+        if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
+          this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(feed[i].size / 2, 2));
+          feed.splice(i, 1);
+          i--;
+        } else if (this.dist(feed[i]) < this.dist(feed[cFood])) {
+          cFood = i;
+        }
       }
     }
     return feed[cFood];
@@ -289,9 +300,8 @@ class Cell extends Element {
   //Creates a new cell with possibility of mutation
   reproduce() {
     this.offspring++;
-    var fraction = randInt(100, 500) / 1000; //Amount used to form child
-    cells.push(newCell(this.size * Math.sqrt(fraction), this.x, this.y, this.color, this.args, this.defComm));
-    this.size *= Math.sqrt(1 - fraction);
+    cells.push(newCell(this.size * Math.sqrt(this.fraction), this.x, this.y, this.color, this.fraction, this.args, this.defComm));
+    this.size *= Math.sqrt(1 - this.fraction);
   }
 
   //Cell moves according to its given rules.
@@ -370,8 +380,16 @@ class Cell extends Element {
         this.defComm.action[0] = randVal(['goto', 'avoid']);
       }
     }
-    var millionthLost = 0.5;
-    this.size -= 2 * Math.sqrt(Math.pow(this.size / 2, 2) * (millionthLost / 1000000));
+    var percentageLoss = 0.01;
+    var amountLoss = percentageLoss/100 * Math.pow(this.size, 2);
+    this.size = Math.sqrt(Math.pow(this.size, 2)-percentageLoss);
+    var fSize = Math.sqrt(amountLoss);
+    if (fSize > 1){
+      var rDeg = randInt(1, 360);
+      var rDist = Math.pow(randInt(0, Math.sqrt(this.size)*1000)/1000, 2);
+      feed.push(new Food ( amountLoss, this.x+rDist*Math.cos(rDeg), this.y+rDist*Math.sin(rDeg), this.color ));
+    }
+
     this.x = ((this.x % worldWidth) + worldWidth) % worldWidth;
     this.y = ((this.y % worldHeight) + worldHeight) % worldHeight;
     this.age++;
@@ -427,6 +445,10 @@ function init() {
       randInt(worldWidth / 60, worldWidth / 20),
       randInt(0, worldWidth),
       randInt(0, worldHeight)));
+    spawners.push(new Spawner(
+      randInt(worldWidth / 60, worldWidth / 20),
+      randInt(0, worldWidth),
+      randInt(0, worldHeight)));
   }
   for (var i = 0; i < worldWidth / 5; i++) {
     cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 100));
@@ -434,12 +456,7 @@ function init() {
   }
   var numFood = worldWidth / 2;
   for (var i = 0; i < numFood; i++) {
-    feed.push(new Food(
-      randInt(1, 10),
-      randInt(0, worldWidth),
-      randInt(0, worldHeight),
-      randColor()
-    ));
+    randFood(randInt(0, spawners.length-1));
     minWorldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
   }
   targCell = 0;
@@ -463,7 +480,6 @@ function frame() {
     context.arc(feed[i].x * sizeRatio, feed[i].y * sizeRatio, feed[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
-    worldSize += Math.PI * Math.pow(feed[i].size / 2, 2);
   }
   context.globalAlpha = 0.5;
   for (currId = 0; currId < cells.length; currId++) {
@@ -489,6 +505,10 @@ function frame() {
       }
       worldSize += Math.PI * Math.pow(cells[currId].size / 2, 2);
     }
+  }
+
+  for (var i = 0; i < feed.length; i++){
+    worldSize += Math.PI * Math.pow(feed[i].size / 2, 2);
   }
 
   context.lineWidth = 5;
@@ -554,15 +574,23 @@ function frame() {
     }
     petris[i].killCells();
   }
+  for (var i = 0; i < spawners.length; i++) {
+    var points = getPoints(spawners[i]);
+    context.fillStyle = spawners[i].color;
+    context.strokeStyle = spawners[i].color;
+    for (var j = 0; j < points.length; j++) {
+      context.beginPath();
+      context.arc(points[j][0] * sizeRatio, points[j][1] * sizeRatio, spawners[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
+      context.globalAlpha = 0.5;
+      context.stroke();
+      context.globalAlpha = 0.25;
+      context.fill();
+    }
+  }
   context.lineWidth = 1;
   context.globalAlpha = 1;
   while (worldSize < minWorldSize) {
-    feed.push(new Food(
-      randInt(1, 10),
-      randInt(0, worldWidth),
-      randInt(0, worldHeight),
-      randColor()
-    ));
+    randFood(randInt(0, spawners.length-1));
     worldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
 
     var percentage = 1; //Chance of random cell appearing
@@ -628,6 +656,14 @@ function getPoints(obj) {
   ];
 }
 
+//Creates a random food around a spawner
+function randFood(id) {
+  var deg = randInt(1, 360);
+  var fX = spawners[id].x+randInt(spawners[id].size*1.25/2, spawners[id].size*1.75/2)*Math.cos(deg);
+  var fY = spawners[id].y+randInt(spawners[id].size*1.25/2, spawners[id].size*1.75/2)*Math.sin(deg);
+  feed.push(new Food(randInt(1, 10), fX, fY, randColor()));
+}
+
 //Creates a random cell with random attributes
 function randomCell(size) {
   return new Cell(
@@ -635,6 +671,7 @@ function randomCell(size) {
     randInt(0, worldWidth), //x
     randInt(0, worldHeight), //y
     randColor(), //color
+    randInt(100, 500) / 1000, //fraction
     randCommands(randInt(1, 9)), //args
     randCommand()
   );
@@ -704,7 +741,7 @@ function randCommands(num) {
 }
 
 //Creates commands with chance of mutation
-function newCell(size, x, y, color, comms, defComm) {
+function newCell(size, x, y, color, fraction, comms, defComm) {
   newComms = new Array();
   for (var i = 0; i < comms.length; i++) {
     newComms.push(newCommand(comms[i]));
@@ -718,7 +755,14 @@ function newCell(size, x, y, color, comms, defComm) {
     newColor = '#' + (parseInt(col) + randInt(-4096, 4096)).toString(16);
   }
 
-  var percentage = 1; //Chance of completely random color
+  percentage = 20; //Chance of change in fraction
+  if (randInt(1, 10000) <= percentage * 100) {
+    fraction+=randInt(-100, 100)/1000;
+    fraction = Math.max(0, Math.min(0.75, fraction));
+  }
+
+
+  percentage = 1; //Chance of completely random color
   if (randInt(1, 10000) <= percentage * 100) {
     newColor = randColor();
   }
@@ -729,13 +773,13 @@ function newCell(size, x, y, color, comms, defComm) {
       newComms.splice(-1, 1);
     }
 
-    var percentage = 0.5; //Chance of completely random command
+    percentage = 0.5; //Chance of completely random command
     if (randInt(1, 10000) <= percentage * 100) {
       newComms.push(randCommand());
     }
   }
 
-  return new Cell(size, x, y, newColor, newComms, newCommand(defComm));
+  return new Cell(size, x, y, newColor, fraction, newComms, newCommand(defComm));
 }
 
 //Creates possibly mutated command
