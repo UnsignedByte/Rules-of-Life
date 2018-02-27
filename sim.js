@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 18:21:37, 26-Feb-2018
+ * @Last modified time: 18:22:28, 26-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -54,7 +54,7 @@ class Petri extends Element {
       }
     }
     for (var i = 0; i < feed.length; i++) {
-      if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2) ) {
+      if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
         feed.splice(i, 1);
         i--;
       }
@@ -181,13 +181,13 @@ class Cell extends Element {
     var sBig, sSmall, cRel;
     for (var i = 0; i < cells.length; i++) {
       if (cells[i].size < this.size) {
-        if ( typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
+        if (typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
           if (this.colDist(cells[i].color) <= 4096) {
             cRel = i;
           }
         }
         if (typeof sSmall === 'undefined' || this.dist(cells[i]) < this.dist(cells[sSmall])) {
-          if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) ) {
+          if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2)) {
             if (this.colDist(cells[i].color) > 4096) {
               this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
               cells.splice(i, 1);
@@ -219,7 +219,7 @@ class Cell extends Element {
             cRel = i;
           }
         }
-        if ( typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
+        if (typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
           if (this.colDist(cells[i].color) <= 4096) {
             cRel = i;
           }
@@ -264,25 +264,25 @@ class Cell extends Element {
     }
     switch (comm.condition[1]) {
       case 0:
-        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) < Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
           return true;
         } else {
           return false;
         }
       case 1:
-        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) <= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
           return true;
         } else {
           return false;
         }
       case 2:
-        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) >= Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
           return true;
         } else {
           return false;
         }
       case 3:
-        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2]+all[comm.condition[0]].size/2, 2)) {
+        if (this.dist(all[comm.condition[0]]) > Math.pow(comm.condition[2] + all[comm.condition[0]].size / 2, 2)) {
           return true;
         } else {
           return false;
@@ -300,7 +300,7 @@ class Cell extends Element {
 
   //Cell moves according to its given rules.
   move() {
-    if ( this.size > 200 ){
+    if (this.size > 200) {
       this.reproduce();
     }
     var closest = this.closestCells();
@@ -337,7 +337,7 @@ class Cell extends Element {
             this.combine = true;
             break;
           } else if (comm.action[0] == "reproduce") {
-            if ( this.size > 100 ){
+            if (this.size > 100) {
               this.reproduce();
               break;
             }
@@ -420,11 +420,11 @@ function init() {
       randInt(0, worldWidth),
       randInt(0, worldHeight)));
   }
-  for (var i = 0; i < worldWidth/5; i++) {
+  for (var i = 0; i < worldWidth / 5; i++) {
     cells.push(randomCell(randInt(1000, 2000) / 100));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
-  var numFood = worldWidth/2;
+  var numFood = worldWidth / 2;
   for (var i = 0; i < numFood; i++) {
     feed.push(new Food(
       randInt(1, 10),
@@ -448,7 +448,7 @@ function frame() {
     context.beginPath();
     context.fillStyle = feed[i].color;
     context.strokeStyle = feed[i].color;
-    context.arc(feed[i].x*sizeRatio, feed[i].y*sizeRatio, feed[i].size*sizeRatio / 2, 0, 2 * Math.PI, false);
+    context.arc(feed[i].x * sizeRatio, feed[i].y * sizeRatio, feed[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
     feed[i].ageInc(i);
@@ -472,7 +472,7 @@ function frame() {
       var points = getPoints(cells[currId]);
       for (var j = 0; j < points.length; j++) {
         context.beginPath();
-        context.arc(points[j][0]*sizeRatio, points[j][1]*sizeRatio, cells[currId].size*sizeRatio / 2, 0, 2 * Math.PI, false);
+        context.arc(points[j][0] * sizeRatio, points[j][1] * sizeRatio, cells[currId].size * sizeRatio / 2, 0, 2 * Math.PI, false);
         context.stroke();
         context.fill();
       }
@@ -483,18 +483,18 @@ function frame() {
   context.lineWidth = 5;
   var points = getPoints(oldest);
 
-  for ( var i = 0; i < points.length; i++ ){
+  for (var i = 0; i < points.length; i++) {
     context.beginPath();
-    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, oldest.size*sizeRatio / 2 + 2.5, 0, 2 * Math.PI, false);
+    context.arc(points[i][0] * sizeRatio, points[i][1] * sizeRatio, oldest.size * sizeRatio / 2 + 2.5, 0, 2 * Math.PI, false);
     context.strokeStyle = "#FFD700";
     context.stroke();
   }
 
   points = getPoints(bigMama);
 
-  for ( var i = 0; i < points.length; i++ ){
+  for (var i = 0; i < points.length; i++) {
     context.beginPath();
-    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(bigMama.size*sizeRatio / 2 - 2.5, 0), 0, 2 * Math.PI, false);
+    context.arc(points[i][0] * sizeRatio, points[i][1] * sizeRatio, Math.max(bigMama.size * sizeRatio / 2 - 2.5, 0), 0, 2 * Math.PI, false);
     context.strokeStyle = "#4286f4";
     context.stroke();
   }
@@ -502,9 +502,9 @@ function frame() {
   points = getPoints(biggest);
 
   context.lineWidth = 5;
-  for ( var i = 0; i < points.length; i++ ){
+  for (var i = 0; i < points.length; i++) {
     context.beginPath();
-    context.arc(points[i][0]*sizeRatio, points[i][1]*sizeRatio, Math.max(biggest.size*sizeRatio / 2, 0), 0, 2 * Math.PI, false);
+    context.arc(points[i][0] * sizeRatio, points[i][1] * sizeRatio, Math.max(biggest.size * sizeRatio / 2, 0), 0, 2 * Math.PI, false);
     context.strokeStyle = "#129115";
     context.stroke();
   }
@@ -515,7 +515,7 @@ function frame() {
     context.beginPath();
     context.fillStyle = holes[i].color;
     context.strokeStyle = holes[i].color;
-    context.arc(holes[i].x*sizeRatio, holes[i].y*sizeRatio, holes[i].size*sizeRatio / 2, 0, 2 * Math.PI, false);
+    context.arc(holes[i].x * sizeRatio, holes[i].y * sizeRatio, holes[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
     context.stroke();
     context.fill();
     holes[i].move();
@@ -527,7 +527,7 @@ function frame() {
     context.strokeStyle = petris[i].color;
     for (var j = 0; j < points.length; j++) {
       context.beginPath();
-      context.arc(points[j][0]*sizeRatio, points[j][1]*sizeRatio, petris[i].size*sizeRatio / 2, 0, 2 * Math.PI, false);
+      context.arc(points[j][0] * sizeRatio, points[j][1] * sizeRatio, petris[i].size * sizeRatio / 2, 0, 2 * Math.PI, false);
       context.globalAlpha = 0.5;
       context.stroke();
       context.globalAlpha = 0.25;
@@ -548,7 +548,7 @@ function frame() {
 
     var percentage = 1; //Chance of random cell appearing
     if (randInt(1, 10000) <= percentage * 100) {
-      cells.push( randomCell( randInt(1000, 2000) / 100 ) );
+      cells.push(randomCell(randInt(1000, 2000) / 100));
       worldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
     }
   }
@@ -567,8 +567,8 @@ function displayCell(cell, id) {
   document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
   document.getElementById('position' + id).innerHTML = "Position: (" + Math.round(cell.x) + "," + Math.round(cell.y) + ")";
   if (cell.defComm.action[0] == 'combine') {
-    document.getElementById('defComm' + id).innerHTML  = 'combine with nearby relatives';
-  }else if (cell.defComm.action[0] == 'reproduce') {
+    document.getElementById('defComm' + id).innerHTML = 'combine with nearby relatives';
+  } else if (cell.defComm.action[0] == 'reproduce') {
     document.getElementById('defComm' + id).innerHTML = 'reproduce';
   } else {
     document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
@@ -578,30 +578,30 @@ function displayCell(cell, id) {
 }
 
 
-function setWorld(wid){
+function setWorld(wid) {
   worldWidth = wid;
-  worldHeight = canv.height/canv.width * worldWidth;
-  sizeRatio = canv.width/worldWidth;
+  worldHeight = canv.height / canv.width * worldWidth;
+  sizeRatio = canv.width / worldWidth;
 }
 
 //return list of points used for rendering
-function getPoints (obj){
+function getPoints(obj) {
   return [
     [obj.x, obj.y],
-  [obj.x + worldWidth, obj.y],
-  [obj.x - worldWidth, obj.y],
-  [obj.x, obj.y + worldHeight],
-  [obj.x, obj.y - worldHeight]
-];
+    [obj.x + worldWidth, obj.y],
+    [obj.x - worldWidth, obj.y],
+    [obj.x, obj.y + worldHeight],
+    [obj.x, obj.y - worldHeight]
+  ];
 }
 
 //Creates a random cell with random attributes
 function randomCell(size) {
   return new Cell(
     size, //size
-    randInt(0, worldWidth),      //x
-    randInt(0, worldHeight),     //y
-    randColor(),                 //color
+    randInt(0, worldWidth), //x
+    randInt(0, worldHeight), //y
+    randColor(), //color
     randCommands(randInt(1, 9)), //args
     randCommand()
   );
@@ -626,7 +626,7 @@ function updateConds(cell, id) {
     var actNew = document.createElement('td');
     if (cell.args[i].action[0] == 'combine') {
       actNew.innerHTML = 'combine with nearby relatives';
-    }else if (cell.args[i].action[0] == 'reproduce') {
+    } else if (cell.args[i].action[0] == 'reproduce') {
       actNew.innerHTML = 'reproduce';
     } else {
       actNew.innerHTML = cell.args[i].action[0] + " the nearest " + mapComm(cell.args[i].action[1], "subj");
