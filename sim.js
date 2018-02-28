@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 12:00:54, 27-Feb-2018
+ * @Last modified time: 18:40:45, 27-Feb-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -49,7 +49,7 @@ class Spawner extends Element {
 
   eatCells(){
     for (var i = 0; i < cells.length; i++) {
-      if (this.dist(cells[i]) <= Math.pow(cells[i].size / 2 + this.size / 2, 2) && this.size > cells[i].size) {
+      if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size > cells[i].size) {
         if (i < currId) {
           currId--;
         }
@@ -424,16 +424,14 @@ class Cell extends Element {
         this.defComm.action[0] = randVal(['goto', 'avoid']);
       }
     }
-    if (this.age % 10 == 0){
-      var percentageLoss = 0.5;
-      var amountLoss = percentageLoss/100 * Math.pow(this.size, 2);
-      this.size = Math.sqrt(Math.pow(this.size, 2)-percentageLoss);
-      var fSize = Math.sqrt(amountLoss);
-      if (fSize > 5){
-        var rDeg = randInt(1, 360);
-        var rDist = Math.pow(randInt(0, Math.sqrt(this.size)*1000)/2000, 2);
-        feed.push(new Food ( fSize, this.x+rDist*Math.cos(rDeg), this.y+rDist*Math.sin(rDeg), this.color ));
-      }
+    var percentageLoss = 1;
+    var amountLoss = percentageLoss/100 * Math.pow(this.size, 2);
+    this.size = Math.sqrt(Math.pow(this.size, 2)-amountLoss);
+    var fSize = Math.sqrt(amountLoss);
+    if (fSize > 5){
+      var rDeg = randInt(1, 360);
+      var rDist = Math.pow(randInt(0, Math.sqrt(this.size)*1000)/2000, 2);
+      feed.push(new Food ( fSize, this.x+rDist*Math.cos(rDeg), this.y+rDist*Math.sin(rDeg), this.color ));
     }
 
     this.x = ((this.x % worldWidth) + worldWidth) % worldWidth;
