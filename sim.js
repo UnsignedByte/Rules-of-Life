@@ -3,10 +3,9 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 16:05:47, 28-Feb-2018
+ * @Last modified time: 07:07:54, 01-Mar-2018
  */
 //the canvas
-
 var canv = document.getElementById('world');
 var context = canv.getContext("2d");
 //Array of all existing elements
@@ -24,7 +23,7 @@ var sizeRatio;
 var subjects = ["sSpawner", "bSpawner", "cRel", "sBig", "sSmall", "cFood", "cHole", "sPetri", "bPetri"];
 var actions = ["reproduce", "combine", "avoid", "goto"];
 
-//Superclass for all elements on screen, contains a position
+//Superclass for all elements on screen
 class Element {
   constructor(size, x, y, color) {
     this.size = size;
@@ -50,19 +49,19 @@ class Spawner extends Element {
     this.defaultSize = size;
   }
 
-  eatCells(){
+  act() {
     for (var i = 0; i < cells.length; i++) {
       if (this.dist(cells[i]) <= Math.pow(this.size / 2, 2) && this.size > cells[i].size) {
-        this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(cells[i].size/2, 2));
+        this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
         if (i < currId) {
           currId--;
         }
         if (i < targCell) {
           targCell--;
-        }else if ( i == targCell ){
+        } else if (i == targCell) {
           mousePos = {
-            x:cells[i].x,
-            y:cells[i].y
+            x: cells[i].x,
+            y: cells[i].y
           }
           clickHappened = true;
         }
@@ -72,14 +71,14 @@ class Spawner extends Element {
     }
     for (var i = 0; i < feed.length; i++) {
       if (this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
-        this.size = 2*Math.sqrt(Math.pow(this.size/2, 2)+Math.pow(feed[i].size/2, 2));
+        this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(feed[i].size / 2, 2));
         feed.splice(i, 1);
         i--;
       }
     }
-    if (this.size > this.defaultSize){
+    if (this.size > this.defaultSize) {
       randFood(this.id, 1);
-      this.size = 2*Math.sqrt(Math.pow(this.size/2,2)-Math.pow(feed[feed.length-1].size/2, 2))
+      this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) - Math.pow(feed[feed.length - 1].size / 2, 2))
     }
   }
 }
@@ -93,7 +92,7 @@ class Petri extends Element {
   }
 
   //forces bigger unlucky passerby cells to break apart
-  killCells() {
+  splitCells() {
     for (var i = 0; i < cells.length; i++) {
       if (this.dist(cells[i]) <= Math.pow(cells[i].size / 2 + this.size / 2, 2) && this.size < cells[i].size) {
         while (this.size < cells[i].size) {
@@ -162,7 +161,7 @@ class Cell extends Element {
   closestFood() {
     var cFood = 0;
     for (var i = 0; i < feed.length; i++) {
-      if ( this.colDist(feed[i].color) > 4096 && this.dist(feed[i]) < this.dist(feed[cFood]) ){
+      if (this.colDist(feed[i].color) > 4096 && this.dist(feed[i]) < this.dist(feed[cFood])) {
         cFood = i;
       }
     }
@@ -170,9 +169,9 @@ class Cell extends Element {
   }
 
   //eats Food
-  eatFood(){
-    for ( var i = 0; i < feed.length; i++ ){
-      if ( this.colDist(feed[i].color) > 4096 && this.dist(feed[i]) <= Math.pow(this.size / 2, 2) ){
+  eatFood() {
+    for (var i = 0; i < feed.length; i++) {
+      if (this.colDist(feed[i].color) > 4096 && this.dist(feed[i]) <= Math.pow(this.size / 2, 2)) {
         this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(feed[i].size / 2, 2));
         feed.splice(i, 1);
         i--;
@@ -227,10 +226,10 @@ class Cell extends Element {
     return nHole;
   }
 
-  eatCells(){
-    for ( var i = 0; i < cells.length; i++ ){
-      if ( this.size > cells[i].size && this.dist(cells[i]) <= Math.pow(this.size / 2, 2) ){
-        if (this.colDist(cells[i].color) > 4096){
+  eatCells() {
+    for (var i = 0; i < cells.length; i++) {
+      if (this.size > cells[i].size && this.dist(cells[i]) <= Math.pow(this.size / 2, 2)) {
+        if (this.colDist(cells[i].color) > 4096) {
           this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
           cells.splice(i, 1);
           if (i < currId) {
@@ -238,18 +237,18 @@ class Cell extends Element {
           }
           if (i < targCell) {
             targCell--;
-          }else if ( i == targCell ){
+          } else if (i == targCell) {
             targCell = currId;
           }
           i--;
-        }else {
+        } else {
           this.age = Math.max(cells[i].age, this.age);
           this.offspring += cells[i].offspring;
           this.size = 2 * Math.sqrt(Math.pow(this.size / 2, 2) + Math.pow(cells[i].size / 2, 2));
-          for ( var j = 0; j < randVal([this.args.length, cells[i].args.length]); j++ ){
-            if ( this.args.length <= j ){
+          for (var j = 0; j < randVal([this.args.length, cells[i].args.length]); j++) {
+            if (this.args.length <= j) {
               this.args.push(cells[i].args[j]);
-            }else if ( cells[i].args.length > j ){
+            } else if (cells[i].args.length > j) {
               this.args[j] = randVal([this.args[j], cells[i].args[j]]);
             }
           }
@@ -259,7 +258,7 @@ class Cell extends Element {
           }
           if (i < targCell) {
             targCell--;
-          }else if ( i == targCell ){
+          } else if (i == targCell) {
             targCell = currId;
           }
           i--;
@@ -277,7 +276,7 @@ class Cell extends Element {
           if (typeof cRel === 'undefined' || this.dist(cells[i]) < this.dist(cells[cRel])) {
             cRel = i;
           }
-        }else if (typeof sSmall === 'undefined' || this.dist(cells[i]) < this.dist(cells[sSmall])) {
+        } else if (typeof sSmall === 'undefined' || this.dist(cells[i]) < this.dist(cells[sSmall])) {
           if (this.colDist(cells[i].color) > 4096) {
             sSmall = i;
           }
@@ -365,9 +364,9 @@ class Cell extends Element {
     this.size *= Math.sqrt(1 - this.fraction);
   }
 
-  addtoAll(subj){
-    if (!(subj in this.all)){
-      switch (subj){
+  addtoAll(subj) {
+    if (!(subj in this.all)) {
+      switch (subj) {
         case "sSpawner":
         case "bSpawner":
           var spawns = this.closestSpawner();
@@ -415,37 +414,37 @@ class Cell extends Element {
       var comm = this.args[i];
       this.addtoAll(comm.condition[0]);
       if (this.isCond(comm)) {
-       if (comm.action[0] == "combine") {
-         this.combine = true;
-         break;
-       } else if (comm.action[0] == "reproduce") {
-         if (this.size > 100) {
-           this.reproduce();
-           break;
-         }
-       }else{
-         this.addtoAll(comm.action[1]);
-         var targ = this.all[comm.action[1]];
-         if (typeof targ !== 'undefined') {
-           var targDist = this.compDist(targ);
-           this.currAct = i;
-           if (comm.action[0] == "goto") {
-             if (targDist[0] > 0) {
-               anyPos = false;
-               this.x -= 5 * (this.x - targDist[1]) / targDist[0];
-               this.y -= 5 * (this.y - targDist[2]) / targDist[0];
-               break;
-             }
-           } else if (comm.action[0] == "avoid") {
-             if (targDist[0] > 0) {
-               anyPos = false;
-               this.x += 5 * (this.x - targDist[1]) / targDist[0];
-               this.y += 5 * (this.y - targDist[2]) / targDist[0];
-               break;
-             }
-           }
-         }
-       }
+        if (comm.action[0] == "combine") {
+          this.combine = true;
+          break;
+        } else if (comm.action[0] == "reproduce") {
+          if (this.size > 100) {
+            this.reproduce();
+            break;
+          }
+        } else {
+          this.addtoAll(comm.action[1]);
+          var targ = this.all[comm.action[1]];
+          if (typeof targ !== 'undefined') {
+            var targDist = this.compDist(targ);
+            this.currAct = i;
+            if (comm.action[0] == "goto") {
+              if (targDist[0] > 0) {
+                anyPos = false;
+                this.x -= 5 * (this.x - targDist[1]) / targDist[0];
+                this.y -= 5 * (this.y - targDist[2]) / targDist[0];
+                break;
+              }
+            } else if (comm.action[0] == "avoid") {
+              if (targDist[0] > 0) {
+                anyPos = false;
+                this.x += 5 * (this.x - targDist[1]) / targDist[0];
+                this.y += 5 * (this.y - targDist[2]) / targDist[0];
+                break;
+              }
+            }
+          }
+        }
       }
     }
     if (anyPos) {
@@ -475,27 +474,27 @@ class Cell extends Element {
         this.defComm.action[0] = randVal(['goto', 'avoid']);
       }
     }
-    if (fSize > 10 && this.age % 5 == 0 ){
+    if (fSize > 10 && this.age % 5 == 0) {
       var percentageLoss = 2;
-    }else{
+    } else {
       var percentageLoss = 0.5;
     }
-    var amountLoss = percentageLoss/100 * Math.pow(this.size, 2);
-    this.size = Math.sqrt(Math.pow(this.size, 2)-amountLoss);
+    var amountLoss = percentageLoss / 100 * Math.pow(this.size, 2);
+    this.size = Math.sqrt(Math.pow(this.size, 2) - amountLoss);
     var fSize = Math.sqrt(amountLoss);
-    if (fSize > 10 && this.age % 5 == 0 ){
+    if (fSize > 10 && this.age % 5 == 0) {
       var rDeg = randInt(1, 360);
-      var rDist = Math.pow(randInt(0, Math.sqrt(this.size)*1000)/2000, 2);
-      feed.push(new Food ( fSize, this.x+rDist*Math.cos(rDeg), this.y+rDist*Math.sin(rDeg), this.color ));
+      var rDist = Math.pow(randInt(0, Math.sqrt(this.size) * 1000) / 2000, 2);
+      feed.push(new Food(fSize, this.x + rDist * Math.cos(rDeg), this.y + rDist * Math.sin(rDeg), this.color));
     }
 
-    if (this.size <= worldWidth/600){
+    if (this.size <= worldWidth / 600) {
       if (currId < targCell) {
         targCell--;
-      }else if ( currId == targCell ){
+      } else if (currId == targCell) {
         mousePos = {
-          x:cells[i].x,
-          y:cells[i].y
+          x: cells[i].x,
+          y: cells[i].y
         }
         clickHappened = true;
       }
@@ -546,7 +545,7 @@ init();
 function init() {
   clickHappened = false;
   canv.width = window.innerWidth;
-  canv.height = 0.75 * window.innerHeight;
+  canv.height = Math.round(2/3 * window.innerHeight);
   setWorld(3000);
 
   for (var i = 0; i < worldWidth / 600; i++) {
@@ -568,12 +567,12 @@ function init() {
   }
   console.log(spawners);
   for (var i = 0; i < worldWidth / 6; i++) {
-    cells.push(randomCell(randInt(worldWidth / 2, worldWidth)/60));
+    cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 60));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
   var numFood = 1;
   for (var i = 0; i < numFood; i++) {
-    randFood(randInt(0, spawners.length-1), randInt(1, 5));
+    randFood(randInt(0, spawners.length - 1), randInt(1, 5));
     minWorldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
   }
   targCell = 0;
@@ -591,6 +590,7 @@ function frame() {
   var biggest = cells[0];
   var worldSize = 0;
   context.clearRect(0, 0, canv.width, canv.height);
+  context.globalAlpha = 0.75;
   for (var i = 0; i < feed.length; i++) {
     context.beginPath();
     context.fillStyle = feed[i].color;
@@ -599,7 +599,7 @@ function frame() {
     context.stroke();
     context.fill();
     feed[i].age++;
-    if (feed[i].age > 1000){
+    if (feed[i].age > 1000) {
       feed.splice(i, 1);
       i--;
     }
@@ -630,7 +630,7 @@ function frame() {
     }
   }
 
-  for (var i = 0; i < feed.length; i++){
+  for (var i = 0; i < feed.length; i++) {
     worldSize += Math.PI * Math.pow(feed[i].size / 2, 2);
   }
 
@@ -695,7 +695,7 @@ function frame() {
       context.globalAlpha = 0.25;
       context.fill();
     }
-    petris[i].killCells();
+    petris[i].splitCells();
   }
   for (var i = 0; i < spawners.length; i++) {
     var points = getPoints(spawners[i]);
@@ -709,12 +709,12 @@ function frame() {
       context.globalAlpha = 0.25;
       context.fill();
     }
-    spawners[i].eatCells();
+    spawners[i].act();
   }
   context.lineWidth = 1;
   context.globalAlpha = 1;
   while (worldSize < minWorldSize) {
-    randFood(randInt(0, spawners.length-1), randInt(1, 5));
+    randFood(randInt(0, spawners.length - 1), randInt(1, 5));
     worldSize += Math.PI * Math.pow(feed[feed.length - 1].size / 2, 2);
 
     var percentage = 1; //Chance of random cell appearing
@@ -724,44 +724,48 @@ function frame() {
     }
   }
 
-
   displayCell(oldest, 0);
   displayCell(bigMama, 1);
   displayCell(biggest, 2);
   displayCell(cells[targCell], 3);
 
-  if (clickHappened){
+  if (clickHappened) {
     targCell = 0;
-    for ( var i = 1; i < cells.length; i++ ){
-      if ( cells[i].dist(mousePos) < cells[targCell].dist(mousePos) ) {
+    for (var i = 1; i < cells.length; i++) {
+      if (cells[i].dist(mousePos) < cells[targCell].dist(mousePos)) {
         targCell = i;
       }
     }
     clickHappened = false;
   }
-  console.log("Framerate:", 1000/(Date.now()-concTime), "frames per second")
+  context.fillStyle = '#000000';
+  context.font = '24px Courier';
+  context.fillText('FPS: ' + Math.round(100000 / (Date.now() - concTime))/100, 10, canv.height-10)
+  console.log("Framerate:", 1000 / (Date.now() - concTime), "frames per second")
   concTime = Date.now();
 
   window.requestAnimationFrame(frame);
 }
 
 function displayCell(cell, id) {
-  document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
-  document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
-  document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
-  document.getElementById('color' + id).innerHTML = "Color: " + cell.color;
-  if (cell.defComm.action[0] == 'combine') {
-    document.getElementById('defComm' + id).innerHTML = 'combine with nearby relatives';
-  } else if (cell.defComm.action[0] == 'reproduce') {
-    document.getElementById('defComm' + id).innerHTML = 'reproduce';
-  } else {
-    document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
-  }
-  if (cell.currAct == -1) {
-    document.getElementById('defComm' + id).setAttribute("class", "yellow");
-  }
+  if (typeof cell !== 'undefined'){
+    document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
+    document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
+    document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
+    document.getElementById('color' + id).innerHTML = "Color: " + cell.color;
+    if (cell.defComm.action[0] == 'combine') {
+      document.getElementById('defComm' + id).innerHTML = 'combine with nearby relatives';
+    } else if (cell.defComm.action[0] == 'reproduce') {
+      document.getElementById('defComm' + id).innerHTML = 'reproduce';
+    } else {
+      document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
+    }
+    if (cell.currAct == -1) {
+      document.getElementById('defComm' + id).setAttribute("class", "yellow");
+    }
 
-  updateConds(cell, id);
+    updateConds(cell, id);
+  }
 }
 
 
@@ -784,13 +788,13 @@ function getPoints(obj) {
 
 //Creates a random food around a spawner
 function randFood(id, override) {
-  if (override === 1){
+  if (override === 1) {
     var deg = randInt(1, 360);
-    var fX = spawners[id].x+Math.pow(randInt(Math.sqrt(spawners[id].size*1/2), Math.sqrt(spawners[id].size*2.25/2)), 2)*Math.cos(deg);
-    var fY = spawners[id].y+Math.pow(randInt(Math.sqrt(spawners[id].size*1/2), Math.sqrt(spawners[id].size*2.25/2)), 2)*Math.sin(deg);
-    feed.push(new Food(randInt(worldWidth/600, spawners[id].size/5), fX, fY, randColor()));
-  }else{
-    feed.push(new Food(randInt(worldWidth/600, worldWidth/150), randInt(0, worldWidth), randInt(0, worldHeight), randColor()));
+    var fX = spawners[id].x + Math.pow(randInt(Math.sqrt(spawners[id].size * 1 / 2), Math.sqrt(spawners[id].size * 2.25 / 2)), 2) * Math.cos(deg);
+    var fY = spawners[id].y + Math.pow(randInt(Math.sqrt(spawners[id].size * 1 / 2), Math.sqrt(spawners[id].size * 2.25 / 2)), 2) * Math.sin(deg);
+    feed.push(new Food(randInt(worldWidth / 600, spawners[id].size / 5), fX, fY, randColor()));
+  } else {
+    feed.push(new Food(randInt(worldWidth / 600, worldWidth / 150), randInt(0, worldWidth), randInt(0, worldHeight), randColor()));
   }
 }
 
@@ -889,7 +893,7 @@ function newCell(size, x, y, color, fraction, comms, defComm) {
 
   percentage = 20; //Chance of change in fraction
   if (randInt(1, 10000) <= percentage * 100) {
-    fraction+=randInt(-100, 100)/1000;
+    fraction += randInt(-100, 100) / 1000;
     fraction = Math.max(0, Math.min(0.75, fraction));
   }
 
@@ -923,7 +927,7 @@ function newCommand(comm) {
     condition[0] = randVal(subjects);
   }
 
-  percentage = 10; //Chance of change in comparison (<,<=,>=,>)
+  percentage = 5; //Chance of change in comparison (<,<=,>=,>)
   if (randInt(1, 10000) <= percentage * 100) {
     condition[1] = randInt(0, 3);
   }
@@ -947,7 +951,7 @@ function newCommand(comm) {
   }
 
 
-  percentage = 5; //Chance of change in target
+percentage = 2.5; //Chance of change in target
   if (randInt(1, 10000) <= percentage * 100) {
     action[1] = randVal(subjects);
   }
@@ -981,6 +985,7 @@ function randVal(a) {
   return a[randInt(0, a.length - 1)];
 }
 
+//Returns the position of the mouse
 function getMousePos(evt) {
   var rect = canv.getBoundingClientRect();
   return {
@@ -989,6 +994,7 @@ function getMousePos(evt) {
   };
 }
 
+//Check when click for targeting
 canv.addEventListener('click', function(evt) {
   mousePos = getMousePos(evt);
   mousePos.x /= sizeRatio;
