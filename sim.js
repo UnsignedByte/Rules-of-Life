@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 07:07:54, 01-Mar-2018
+ * @Last modified time: 19:24:48, 24-Mar-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -249,7 +249,9 @@ class Cell extends Element {
             if (this.args.length <= j) {
               this.args.push(cells[i].args[j]);
             } else if (cells[i].args.length > j) {
-              this.args[j] = randVal([this.args[j], cells[i].args[j]]);
+              if (this.args[j].uses < cells[i].args[j]) {
+                this.args[j] = cells[i].args[j];
+              }
             }
           }
           cells.splice(i, 1);
@@ -360,7 +362,7 @@ class Cell extends Element {
   //Creates a new cell with possibility of mutation
   reproduce() {
     this.offspring++;
-    cells.push(newCell(this.size * Math.sqrt(this.fraction), this.x, this.y, this.color, this.fraction, this.args, this.defComm));
+    cells.push(newCell(this.size * Math.sqrt(this.fraction), this.x, this.y, this.color, this.fraction, this.args, this.defComm, this.age));
     this.size *= Math.sqrt(1 - this.fraction);
   }
 
@@ -414,6 +416,7 @@ class Cell extends Element {
       var comm = this.args[i];
       this.addtoAll(comm.condition[0]);
       if (this.isCond(comm)) {
+        this.args[i].uses++;
         if (comm.action[0] == "combine") {
           this.combine = true;
           break;
@@ -454,6 +457,7 @@ class Cell extends Element {
       while (typeof targ == 'undefined') {
         this.defComm.action[1] = randVal(subjects);
         targ = this.all[this.defComm.action[1]];
+        this.defComm.uses = 0;
       }
       var targDist = this.compDist(targ);
       if (this.defComm.action[0] == "goto") {
@@ -461,6 +465,7 @@ class Cell extends Element {
           this.x -= 5 * (this.x - targDist[1]) / targDist[0];
           this.y -= 5 * (this.y - targDist[2]) / targDist[0];
         } else {
+          this.defComm.uses = 0;
           this.defComm.action[1] = randVal(subjects);
         }
       } else if (this.defComm.action[0] == "avoid") {
@@ -468,11 +473,14 @@ class Cell extends Element {
           this.x += 5 * (this.x - targDist[1]) / targDist[0];
           this.y += 5 * (this.y - targDist[2]) / targDist[0];
         } else {
+          this.defComm.uses = 0;
           this.defComm.action[1] = randVal(subjects);
         }
       } else {
+        this.defComm.uses = 0;
         this.defComm.action[0] = randVal(['goto', 'avoid']);
       }
+      this.defComm.uses++;
     }
     if (fSize > 10 && this.age % 5 == 0) {
       var percentageLoss = 2;
@@ -515,6 +523,7 @@ class Cell extends Element {
 //Class containing a rule the cell must follow
 class Command {
   constructor(condition, action) {
+    this.uses = 0;
     this.condition = condition;
     this.action = action;
   }
@@ -545,7 +554,7 @@ init();
 function init() {
   clickHappened = false;
   canv.width = window.innerWidth;
-  canv.height = Math.round(2/3 * window.innerHeight);
+  canv.height = Math.round(2 / 3 * window.innerHeight);
   setWorld(3000);
 
   for (var i = 0; i < worldWidth / 600; i++) {
@@ -554,7 +563,7 @@ function init() {
       randInt(0, worldHeight),
       randInt(worldWidth / 100, worldWidth / 50)));
   }
-  for (var i = 0; i < worldWidth / 200; i++) {
+  for (var i = 0; i < worldWidth / 400; i++) {
     petris.push(new Petri(
       randInt(worldWidth / 60, worldWidth / 20),
       randInt(0, worldWidth),
@@ -740,7 +749,7 @@ function frame() {
   }
   context.fillStyle = '#000000';
   context.font = '24px Courier';
-  context.fillText('FPS: ' + Math.round(100000 / (Date.now() - concTime))/100, 10, canv.height-10)
+  context.fillText('FPS: ' + Math.round(100000 / (Date.now() - concTime)) / 100, 10, canv.height - 10)
   console.log("Framerate:", 1000 / (Date.now() - concTime), "frames per second")
   concTime = Date.now();
 
@@ -748,7 +757,7 @@ function frame() {
 }
 
 function displayCell(cell, id) {
-  if (typeof cell !== 'undefined'){
+  if (typeof cell !== 'undefined') {
     document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
     document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
     document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
@@ -815,12 +824,16 @@ function randomCell(size) {
 function updateConds(cell, id) {
   var condRow = document.getElementById('cond' + id);
   var actRow = document.getElementById('action' + id);
+  var usesRow = document.getElementById('uses' + id);
 
   while (condRow.firstChild) {
     condRow.removeChild(condRow.firstChild);
   }
   while (actRow.firstChild) {
     actRow.removeChild(actRow.firstChild);
+  }
+  while (usesRow.firstChild) {
+    usesRow.removeChild(usesRow.firstChild);
   }
 
   for (var i = 0; i < cell.args.length; i++) {
@@ -838,8 +851,11 @@ function updateConds(cell, id) {
       condNew.setAttribute("class", "yellow");
       actNew.setAttribute("class", "yellow");
     }
+    var usesNew = document.createElement('td');
+    usesNew.innerHTML = cell.args[i].uses;
     condRow.appendChild(condNew);
     actRow.appendChild(actNew);
+    usesRow.appendChild(usesNew);
   }
 }
 
@@ -877,39 +893,33 @@ function randCommands(num) {
 }
 
 //Creates commands with chance of mutation
-function newCell(size, x, y, color, fraction, comms, defComm) {
+function newCell(size, x, y, color, fraction, comms, defComm, age) {
   newComms = new Array();
   for (var i = 0; i < comms.length; i++) {
-    newComms.push(newCommand(comms[i]));
+    newComms.push(newCommand(comms[i], age));
   }
 
   var newColor = color;
 
-  var percentage = 25; //Chance of change in color
+  var percentage = 10; //Chance of change in color
   if (randInt(1, 10000) <= percentage * 100) {
     var col = '0x' + color.substr(1).toUpperCase();
     newColor = '#' + (parseInt(col) + randInt(-4096, 4096)).toString(16);
   }
 
-  percentage = 20; //Chance of change in fraction
+  percentage = 7.5; //Chance of change in fraction
   if (randInt(1, 10000) <= percentage * 100) {
     fraction += randInt(-100, 100) / 1000;
     fraction = Math.max(0, Math.min(0.75, fraction));
   }
 
-
-  percentage = 1; //Chance of completely random color
-  if (randInt(1, 10000) <= percentage * 100) {
-    newColor = randColor();
-  }
-
   for (i = 0; i < randInt(0, 5); i++) {
-    percentage = 0.5; //Chance of losing a command
+    percentage = 0.1; //Chance of losing a command
     if (randInt(1, 10000) <= percentage * 100) {
       newComms.splice(-1, 1);
     }
 
-    percentage = 0.5; //Chance of completely random command
+    percentage = 0.1; //Chance of completely random command
     if (randInt(1, 10000) <= percentage * 100) {
       newComms.push(randCommand());
     }
@@ -919,40 +929,47 @@ function newCell(size, x, y, color, fraction, comms, defComm) {
 }
 
 //Creates possibly mutated command
-function newCommand(comm) {
+function newCommand(comm, age) {
 
-  var percentage = 1; //Chance of change in subject
+  if (comm.uses > 0) {
+    var commratio = age / comm.uses;
+  } else {
+    var commratio = 10 * age;
+  }
+  commratio /= 10;
+
+  var percentage = 0.5; //Chance of change in subject
   var condition = comm.condition;
-  if (randInt(1, 10000) <= percentage * 100) {
+  if (randInt(1, 10000) <= commratio * percentage * 100) {
     condition[0] = randVal(subjects);
   }
 
-  percentage = 5; //Chance of change in comparison (<,<=,>=,>)
-  if (randInt(1, 10000) <= percentage * 100) {
+  percentage = 2.5; //Chance of change in comparison (<,<=,>=,>)
+  if (randInt(1, 10000) <= commratio * percentage * 100) {
     condition[1] = randInt(0, 3);
   }
 
-  percentage = 25; //Chance of slight change in distance
-  if (randInt(1, 10000) <= percentage * 100) {
+  percentage = 10; //Chance of slight change in distance
+  if (randInt(1, 10000) <= commratio * percentage * 100) {
     condition[2] += randInt(-15, 15);
     condition[2] = Math.min(worldWidth, Math.max(0, condition[2]));
   }
 
   percentage = 1; //Chance of completely random distance
-  if (randInt(1, 10000) <= percentage * 100) {
+  if (randInt(1, 10000) <= commratio * percentage * 100) {
     condition[2] += randInt(0, 200);
   }
 
   var action = comm.action;
 
-  percentage = 2; //Chance of change in action
-  if (randInt(1, 10000) <= percentage * 100) {
+  percentage = 0.5; //Chance of change in action
+  if (randInt(1, 10000) <= commratio * percentage * 100) {
     action[0] = randVal(actions);
   }
 
 
-percentage = 2.5; //Chance of change in target
-  if (randInt(1, 10000) <= percentage * 100) {
+  percentage = 0.5; //Chance of change in target
+  if (randInt(1, 10000) <= commratio * percentage * 100) {
     action[1] = randVal(subjects);
   }
 
