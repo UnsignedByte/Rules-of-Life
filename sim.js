@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 19:24:48, 24-Mar-2018
+ * @Last modified time: 19:28:29, 24-Mar-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -852,7 +852,7 @@ function updateConds(cell, id) {
       actNew.setAttribute("class", "yellow");
     }
     var usesNew = document.createElement('td');
-    usesNew.innerHTML = cell.args[i].uses;
+    usesNew.innerHTML = "uses: "+cell.args[i].uses;
     condRow.appendChild(condNew);
     actRow.appendChild(actNew);
     usesRow.appendChild(usesNew);
@@ -932,11 +932,10 @@ function newCell(size, x, y, color, fraction, comms, defComm, age) {
 function newCommand(comm, age) {
 
   if (comm.uses > 0) {
-    var commratio = age / comm.uses;
+    var commratio = age / comm.uses / 10;
   } else {
-    var commratio = 10 * age;
+    var commratio = age;
   }
-  commratio /= 10;
 
   var percentage = 0.5; //Chance of change in subject
   var condition = comm.condition;
