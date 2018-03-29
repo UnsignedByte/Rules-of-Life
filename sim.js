@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 19:28:29, 24-Mar-2018
+ * @Last modified time: 06:12:48, 29-Mar-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -751,7 +751,6 @@ function frame() {
   context.font = '24px Courier';
   context.fillText('FPS: ' + Math.round(100000 / (Date.now() - concTime)) / 100, 10, canv.height - 10)
   console.log("Framerate:", 1000 / (Date.now() - concTime), "frames per second")
-  concTime = Date.now();
 
   window.requestAnimationFrame(frame);
 }
