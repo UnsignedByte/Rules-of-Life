@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 08:18:32, 26-Aug-2018
+ * @Last modified time: 08:38:49, 26-Aug-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -236,249 +236,65 @@ function frame() {
   window.requestAnimationFrame(frame);
 }
 
+
 function displayCell(cell, id) {
-  if (typeof cell !== 'undefined') {
-    document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
-    document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
-    document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
-    document.getElementById('color' + id).innerHTML = "Color: " + cell.color;
-    if (cell.defComm.action[0] == 'combine') {
-      document.getElementById('defComm' + id).innerHTML = 'combine with nearby relatives';
-    } else if (cell.defComm.action[0] == 'reproduce') {
-      document.getElementById('defComm' + id).innerHTML = 'reproduce';
-    } else {
-      document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
-    }
-    if (cell.currAct == -1) {
-      document.getElementById('defComm' + id).setAttribute("class", "yellow");
-    }
+ if (typeof cell !== 'undefined') {
+   document.getElementById('age' + id).innerHTML = "Age: " + cell.age;
+   document.getElementById('size' + id).innerHTML = "Size: " + Math.round(cell.size);
+   document.getElementById('kid' + id).innerHTML = "Offspring: " + cell.offspring;
+   document.getElementById('color' + id).innerHTML = "Color: " + cell.color;
+   if (cell.defComm.action[0] == 'combine') {
+     document.getElementById('defComm' + id).innerHTML = 'combine with nearby relatives';
+   } else if (cell.defComm.action[0] == 'reproduce') {
+     document.getElementById('defComm' + id).innerHTML = 'reproduce';
+   } else {
+     document.getElementById('defComm' + id).innerHTML = "Default Action: " + cell.defComm.action[0] + " the nearest " + mapComm(cell.defComm.action[1], "subj");
+   }
+   if (cell.currAct == -1) {
+     document.getElementById('defComm' + id).setAttribute("class", "yellow");
+   }
 
-    updateConds(cell, id);
-  }
-}
-
-
-function setWorld(wid) {
-  worldWidth = wid;
-  worldHeight = canv.height / canv.width * worldWidth;
-  sizeRatio = canv.width / worldWidth;
-}
-
-//return list of points used for rendering
-function getPoints(obj) {
-  return [
-    [obj.x, obj.y],
-    [obj.x + worldWidth, obj.y],
-    [obj.x - worldWidth, obj.y],
-    [obj.x, obj.y + worldHeight],
-    [obj.x, obj.y - worldHeight]
-  ];
-}
-
-//Creates a random food around a spawner
-function randFood(id, override) {
-  if (override === 1) {
-    var deg = randInt(1, 360);
-    var fX = spawners[id].x + Math.pow(randInt(Math.sqrt(spawners[id].size * 1 / 2), Math.sqrt(spawners[id].size * 2.25 / 2)), 2) * Math.cos(deg);
-    var fY = spawners[id].y + Math.pow(randInt(Math.sqrt(spawners[id].size * 1 / 2), Math.sqrt(spawners[id].size * 2.25 / 2)), 2) * Math.sin(deg);
-    feed.push(new Food(randInt(worldWidth / 600, spawners[id].size / 5), fX, fY, randColor()));
-  } else {
-    feed.push(new Food(randInt(worldWidth / 600, worldWidth / 150), randInt(0, worldWidth), randInt(0, worldHeight), randColor()));
-  }
-}
-
-//Creates a random cell with random attributes
-function randomCell(size) {
-  return new Cell(
-    size, //size
-    randInt(0, worldWidth), //x
-    randInt(0, worldHeight), //y
-    randColor(), //color
-    randInt(100, 500) / 1000, //fraction
-    randCommands(randInt(1, 9)), //args
-    randCommand()
-  );
+   updateConds(cell, id);
+ }
 }
 
 
 function updateConds(cell, id) {
-  var condRow = document.getElementById('cond' + id);
-  var actRow = document.getElementById('action' + id);
-  var usesRow = document.getElementById('uses' + id);
+ var condRow = document.getElementById('cond' + id);
+ var actRow = document.getElementById('action' + id);
+ var usesRow = document.getElementById('uses' + id);
 
-  while (condRow.firstChild) {
-    condRow.removeChild(condRow.firstChild);
-  }
-  while (actRow.firstChild) {
-    actRow.removeChild(actRow.firstChild);
-  }
-  while (usesRow.firstChild) {
-    usesRow.removeChild(usesRow.firstChild);
-  }
+ while (condRow.firstChild) {
+   condRow.removeChild(condRow.firstChild);
+ }
+ while (actRow.firstChild) {
+   actRow.removeChild(actRow.firstChild);
+ }
+ while (usesRow.firstChild) {
+   usesRow.removeChild(usesRow.firstChild);
+ }
 
-  for (var i = 0; i < cell.args.length; i++) {
-    var condNew = document.createElement('td');
-    condNew.innerHTML = "if distance to nearest <br>" + mapComm(cell.args[i].condition[0], "subj") + " " + mapComm(cell.args[i].condition[1], "conds") + " " + cell.args[i].condition[2] + " px";
-    var actNew = document.createElement('td');
-    if (cell.args[i].action[0] == 'combine') {
-      actNew.innerHTML = 'combine with nearby relatives';
-    } else if (cell.args[i].action[0] == 'reproduce') {
-      actNew.innerHTML = 'reproduce';
-    } else {
-      actNew.innerHTML = cell.args[i].action[0] + " the nearest " + mapComm(cell.args[i].action[1], "subj");
-    }
-    if (cell.currAct == i) {
-      condNew.setAttribute("class", "yellow");
-      actNew.setAttribute("class", "yellow");
-    }
-    var usesNew = document.createElement('td');
-    usesNew.innerHTML = "uses: "+cell.args[i].uses;
-    condRow.appendChild(condNew);
-    actRow.appendChild(actNew);
-    usesRow.appendChild(usesNew);
-  }
-}
-
-function mapComm(str, type) {
-  var dicts = {
-    "subj": {
-      "sSmall": "small cell",
-      "sBig": "big cell",
-      "cHole": "wormhole",
-      "cFood": "food",
-      "sPetri": "small hiding spot",
-      "bPetri": "big hiding spot",
-      "cRel": "relative",
-      "sSpawner": "small spawner",
-      "bSpawner": "big spawner"
-    },
-    "conds": {
-      0: "<",
-      1: "<=",
-      2: ">=",
-      3: ">"
-    }
-  };
-  return dicts[type][str];
-}
-
-
-//Creates an array of num random commands
-function randCommands(num) {
-  comms = new Array();
-  for (var i = 0; i < num; i++) {
-    comms.push(randCommand());
-  }
-  return comms;
-}
-
-//Creates commands with chance of mutation
-function newCell(size, x, y, color, fraction, comms, defComm, age) {
-  newComms = new Array();
-  for (var i = 0; i < comms.length; i++) {
-    newComms.push(newCommand(comms[i], age));
-  }
-
-  var newColor = color;
-
-  var percentage = 10; //Chance of change in color
-  if (randInt(1, 10000) <= percentage * 100) {
-    var col = '0x' + color.substr(1).toUpperCase();
-    newColor = '#' + (parseInt(col) + randInt(-4096, 4096)).toString(16);
-  }
-
-  percentage = 7.5; //Chance of change in fraction
-  if (randInt(1, 10000) <= percentage * 100) {
-    fraction += randInt(-100, 100) / 1000;
-    fraction = Math.max(0, Math.min(0.75, fraction));
-  }
-
-  for (i = 0; i < randInt(0, 5); i++) {
-    percentage = 0.1; //Chance of losing a command
-    if (randInt(1, 10000) <= percentage * 100) {
-      newComms.splice(-1, 1);
-    }
-
-    percentage = 0.1; //Chance of completely random command
-    if (randInt(1, 10000) <= percentage * 100) {
-      newComms.push(randCommand());
-    }
-  }
-
-  return new Cell(size, x, y, newColor, fraction, newComms, newCommand(defComm));
-}
-
-//Creates possibly mutated command
-function newCommand(comm, age) {
-
-  if (comm.uses > 0) {
-    var commratio = age / comm.uses / 10;
-  } else {
-    var commratio = age;
-  }
-
-  var percentage = 0.5; //Chance of change in subject
-  var condition = comm.condition;
-  if (randInt(1, 10000) <= commratio * percentage * 100) {
-    condition[0] = randVal(subjects);
-  }
-
-  percentage = 2.5; //Chance of change in comparison (<,<=,>=,>)
-  if (randInt(1, 10000) <= commratio * percentage * 100) {
-    condition[1] = randInt(0, 3);
-  }
-
-  percentage = 10; //Chance of slight change in distance
-  if (randInt(1, 10000) <= commratio * percentage * 100) {
-    condition[2] += randInt(-15, 15);
-    condition[2] = Math.min(worldWidth, Math.max(0, condition[2]));
-  }
-
-  percentage = 1; //Chance of completely random distance
-  if (randInt(1, 10000) <= commratio * percentage * 100) {
-    condition[2] += randInt(0, 200);
-  }
-
-  var action = comm.action;
-
-  percentage = 0.5; //Chance of change in action
-  if (randInt(1, 10000) <= commratio * percentage * 100) {
-    action[0] = randVal(actions);
-  }
-
-
-  percentage = 0.5; //Chance of change in target
-  if (randInt(1, 10000) <= commratio * percentage * 100) {
-    action[1] = randVal(subjects);
-  }
-
-  return new Command(condition, action);
-}
-
-//Creates a random command
-function randCommand() {
-
-  var condition = [randVal(subjects), randInt(0, 3), randInt(0, 100)];
-  var action = [randVal(actions), randVal(subjects)];
-
-  return new Command(condition, action);
-}
-
-//Returns a random hex color
-function randColor() {
-  return '#' + (Math.random() * 0xFFFFFF << 0).toString(16)
-}
-
-//Returns a random int between min and max, inclusive.
-function randInt(min, max) {
-  min = Math.round(min);
-  max = Math.round(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-//Returns a random value in an array
-function randVal(a) {
-  return a[randInt(0, a.length - 1)];
+ for (var i = 0; i < cell.args.length; i++) {
+   var condNew = document.createElement('td');
+   condNew.innerHTML = "if distance to nearest <br>" + mapComm(cell.args[i].condition[0], "subj") + " " + mapComm(cell.args[i].condition[1], "conds") + " " + cell.args[i].condition[2] + " px";
+   var actNew = document.createElement('td');
+   if (cell.args[i].action[0] == 'combine') {
+     actNew.innerHTML = 'combine with nearby relatives';
+   } else if (cell.args[i].action[0] == 'reproduce') {
+     actNew.innerHTML = 'reproduce';
+   } else {
+     actNew.innerHTML = cell.args[i].action[0] + " the nearest " + mapComm(cell.args[i].action[1], "subj");
+   }
+   if (cell.currAct == i) {
+     condNew.setAttribute("class", "yellow");
+     actNew.setAttribute("class", "yellow");
+   }
+   var usesNew = document.createElement('td');
+   usesNew.innerHTML = "uses: "+cell.args[i].uses;
+   condRow.appendChild(condNew);
+   actRow.appendChild(actNew);
+   usesRow.appendChild(usesNew);
+ }
 }
 
 //Returns the position of the mouse
