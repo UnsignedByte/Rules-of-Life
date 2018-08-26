@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 09:02:30, 26-Aug-2018
+ * @Last modified time: 12:17:53, 26-Aug-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -36,27 +36,27 @@ function init() {
   clickHappened = false;
   canv.width = window.innerWidth;
   canv.height = Math.round(2 / 3 * window.innerHeight);
-  setWorld(3000);
+  setWorld(5000);
 
-  for (var i = 0; i < worldWidth / 600; i++) {
+  for (var i = 0; i < worldWidth / 1000; i++) {
     holes.push(new Hole(
       randInt(0, worldWidth),
       randInt(0, worldHeight),
-      randInt(worldWidth / 100, worldWidth / 50)));
+      randInt(worldWidth / 200, worldWidth / 100)));
   }
-  for (var i = 0; i < worldWidth / 400; i++) {
+  for (var i = 0; i < worldWidth / 600; i++) {
     petris.push(new Petri(
-      randInt(worldWidth / 60, worldWidth / 20),
+      randInt(worldWidth / 100, worldWidth / 50),
       randInt(0, worldWidth),
       randInt(0, worldHeight)));
     spawners.push(new Spawner(
-      randInt(worldWidth / 30, worldWidth / 20),
+      randInt(worldWidth / 100, worldWidth / 50),
       randInt(0, worldWidth),
       randInt(0, worldHeight),
       i));
   }
-  for (var i = 0; i < worldWidth / 6; i++) {
-    cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 60));
+  for (var i = 0; i < worldWidth / 25; i++) {
+    cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 50));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
   }
   var numFood = 1;
@@ -95,8 +95,8 @@ function frame() {
   }
   context.globalAlpha = 0.5;
   for (currId = 0; currId < cells.length; currId++) {
-    cells[currId].move();
     if (typeof cells[currId] !== 'undefined') {
+      cells[currId].move();
       if (oldest.age < cells[currId].age) {
         oldest = cells[currId];
       }

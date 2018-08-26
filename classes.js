@@ -3,7 +3,7 @@
  * @Date:   07:50:28, 26-Aug-2018
  * @Filename: classes.js
  * @Last modified by:   edl
- * @Last modified time: 08:34:51, 26-Aug-2018
+ * @Last modified time: 12:06:44, 26-Aug-2018
  */
 
 //Superclass for all elements on screen
@@ -345,7 +345,9 @@ class Cell extends Element {
  //Creates a new cell with possibility of mutation
  reproduce() {
    this.offspring++;
-   cells.push(newCell(this.size * Math.sqrt(this.fraction), this.x, this.y, this.color, this.fraction, this.args, this.defComm, this.age));
+   var d = Math.random()*Math.PI*2;
+   var dst = Math.random()*this.size*1.5
+   cells.push(newCell(this.size * Math.sqrt(this.fraction), this.x+Math.cos(d)*dst, this.y+Math.sin(d)*dst, this.color, this.fraction, this.args, this.defComm, this.age));
    this.size *= Math.sqrt(1 - this.fraction);
  }
 
@@ -386,12 +388,11 @@ class Cell extends Element {
 
  //Cell moves according to its given rules.
  move() {
-   if (this.size > 200) {
-     this.reproduce();
-   }
    this.all = {};
    this.eatFood();
    this.eatCells();
+
+   var speed = 10/(Math.pow(this.size+1, 0.2)) + 0.5;
 
    var anyPos = true;
    this.combine = false;
@@ -417,15 +418,15 @@ class Cell extends Element {
            if (comm.action[0] == "goto") {
              if (targDist[0] > 0) {
                anyPos = false;
-               this.x -= 5 * (this.x - targDist[1]) / targDist[0];
-               this.y -= 5 * (this.y - targDist[2]) / targDist[0];
+               this.x -= speed * (this.x - targDist[1]) / targDist[0];
+               this.y -= speed * (this.y - targDist[2]) / targDist[0];
                break;
              }
            } else if (comm.action[0] == "avoid") {
              if (targDist[0] > 0) {
                anyPos = false;
-               this.x += 5 * (this.x - targDist[1]) / targDist[0];
-               this.y += 5 * (this.y - targDist[2]) / targDist[0];
+               this.x += speed * (this.x - targDist[1]) / targDist[0];
+               this.y += speed * (this.y - targDist[2]) / targDist[0];
                break;
              }
            }
@@ -445,16 +446,16 @@ class Cell extends Element {
      var targDist = this.compDist(targ);
      if (this.defComm.action[0] == "goto") {
        if (targDist[0] > 0) {
-         this.x -= 5 * (this.x - targDist[1]) / targDist[0];
-         this.y -= 5 * (this.y - targDist[2]) / targDist[0];
+         this.x -= speed * (this.x - targDist[1]) / targDist[0];
+         this.y -= speed * (this.y - targDist[2]) / targDist[0];
        } else {
          this.defComm.uses = 0;
          this.defComm.action[1] = randVal(subjects);
        }
      } else if (this.defComm.action[0] == "avoid") {
        if (targDist[0] > 0) {
-         this.x += 5 * (this.x - targDist[1]) / targDist[0];
-         this.y += 5 * (this.y - targDist[2]) / targDist[0];
+         this.x += speed * (this.x - targDist[1]) / targDist[0];
+         this.y += speed * (this.y - targDist[2]) / targDist[0];
        } else {
          this.defComm.uses = 0;
          this.defComm.action[1] = randVal(subjects);
