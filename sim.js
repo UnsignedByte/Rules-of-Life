@@ -3,7 +3,7 @@
  * @Date:   16:42:00, 13-Feb-2018
  * @Filename: sim.js
  * @Last modified by:   edl
- * @Last modified time: 08:38:49, 26-Aug-2018
+ * @Last modified time: 09:02:30, 26-Aug-2018
  */
 //the canvas
 var canv = document.getElementById('world');
@@ -55,7 +55,6 @@ function init() {
       randInt(0, worldHeight),
       i));
   }
-  console.log(spawners);
   for (var i = 0; i < worldWidth / 6; i++) {
     cells.push(randomCell(randInt(worldWidth / 2, worldWidth) / 60));
     minWorldSize += Math.PI * Math.pow(cells[cells.length - 1].size / 2, 2);
